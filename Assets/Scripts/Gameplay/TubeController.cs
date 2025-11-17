@@ -54,7 +54,10 @@ namespace WaterSort.Core
             foreach (var segment in _liquidStack)
             {
                 if (segment.VisualObject != null)
-                    Destroy(segment.VisualObject);
+                {
+                    // OPTIMIZED: Use Object Pooling instead of Destroy
+                    ObjectPoolManager.Instance?.Despawn(segment.VisualObject);
+                }
             }
             _liquidStack.Clear();
         }
@@ -91,7 +94,19 @@ namespace WaterSort.Core
 
         private GameObject CreateLiquidSegment(LiquidColor color, int index)
         {
-            GameObject segmentObj = Instantiate(LiquidSegmentPrefab, LiquidContainer);
+            // OPTIMIZED: Use Object Pooling instead of Instantiate
+            GameObject segmentObj;
+
+            if (ObjectPoolManager.Instance != null && ObjectPoolManager.Instance.PoolExists("LiquidSegment"))
+            {
+                segmentObj = ObjectPoolManager.Instance.Spawn("LiquidSegment", LiquidContainer);
+            }
+            else
+            {
+                // Fallback to Instantiate if pool doesn't exist
+                segmentObj = Instantiate(LiquidSegmentPrefab, LiquidContainer);
+            }
+
             SpriteRenderer renderer = segmentObj.GetComponent<SpriteRenderer>();
 
             if (renderer != null)
@@ -102,6 +117,7 @@ namespace WaterSort.Core
             // Position based on index
             float yPos = index * SegmentHeight;
             segmentObj.transform.localPosition = new Vector3(0, yPos, 0);
+            segmentObj.transform.localScale = Vector3.one; // Reset scale
 
             LiquidSegment segment = new LiquidSegment
             {
@@ -123,9 +139,12 @@ namespace WaterSort.Core
                 // Animate removal
                 if (segment.VisualObject != null)
                 {
+                    GameObject obj = segment.VisualObject;
+
+                    // OPTIMIZED: Animate then return to pool
                     segment.VisualObject.transform.DOScale(0, 0.2f).OnComplete(() =>
                     {
-                        Destroy(segment.VisualObject);
+                        ObjectPoolManager.Instance?.Despawn(obj);
                     });
                 }
 

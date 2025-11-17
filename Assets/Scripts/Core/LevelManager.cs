@@ -44,9 +44,41 @@ namespace WaterSort.Core
 
         private void Start()
         {
+            // OPTIMIZATION: Initialize object pools
+            InitializeObjectPools();
+
             // Load current level from save
             CurrentLevelIndex = SaveManager.Instance.GetCurrentLevel();
             LoadLevel(CurrentLevelIndex);
+        }
+
+        private void InitializeObjectPools()
+        {
+            // Create liquid segment pool with pre-warming
+            GameObject liquidPrefab = Resources.Load<GameObject>("Prefabs/LiquidSegment");
+
+            if (liquidPrefab == null)
+            {
+                // Try to get from TubeController
+                TubeController tubeSample = TubePrefab?.GetComponent<TubeController>();
+                if (tubeSample != null)
+                {
+                    liquidPrefab = tubeSample.LiquidSegmentPrefab;
+                }
+            }
+
+            if (liquidPrefab != null && ObjectPoolManager.Instance != null)
+            {
+                // Pre-allocate based on device tier
+                int poolSize = DeviceCompatibilityManager.Instance.IsLowEndDevice() ? 50 : 100;
+
+                ObjectPoolManager.Instance.CreatePool("LiquidSegment", liquidPrefab, poolSize);
+                Debug.Log($"Liquid segment pool created with {poolSize} objects");
+            }
+            else
+            {
+                Debug.LogWarning("Could not initialize liquid segment pool - prefab not found");
+            }
         }
 
         public void LoadLevel(int levelIndex)
