@@ -1,0 +1,12 @@
+{
+  "LevelIndex": 0,
+  "TubeCount": 4,
+  "ColorCount": 2,
+  "TubeCapacity": 4,
+  "TubeConfigurations": [
+    [1, 2, 1, 2],
+    [2, 1, 2, 1],
+    [],
+    []
+  ]
+}
