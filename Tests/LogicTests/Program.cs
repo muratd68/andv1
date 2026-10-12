@@ -28,6 +28,7 @@ public static class Program
         GeneratedLevels(1000);
         ReverseMoveFallback();
         Localization();
+        Crypto();
 
         Console.WriteLine(_failures == 0 ? "ALL TESTS PASSED" : $"{_failures} FAILURE(S)");
         return _failures == 0 ? 0 : 1;
@@ -201,5 +202,29 @@ public static class Program
         Check(used > 20, $"expected to find localization keys in code, found {used}");
 
         Console.WriteLine($"Localization: {LocalizationTable.Entries.Count} keys, {used} uses checked");
+    }
+
+    private static void Crypto()
+    {
+        var crypto = new SaveCrypto("test-password", "test-salt");
+        string json = "{\"CurrentLevel\":42,\"Coins\":1234,\"LastDailyReward\":\"2026-10-12T10:00:00.0000000Z\"}";
+
+        string a = crypto.Encrypt(json);
+        string b = crypto.Encrypt(json);
+        Check(a != b, "same value must encrypt differently (random IV)");
+        Check(crypto.Decrypt(a) == json && crypto.Decrypt(b) == json, "decrypt must return the original text");
+        Check(!a.Contains("1234"), "ciphertext must not contain the plain value");
+
+        // A different key cannot read it
+        var other = new SaveCrypto("other-password", "test-salt");
+        bool otherFailed;
+        try { otherFailed = other.Decrypt(a) != json; } catch (Exception) { otherFailed = true; }
+        Check(otherFailed, "a different key must not decrypt the save");
+
+        // Integrity hash detects edits
+        Check(crypto.Hash(json) == crypto.Hash(json), "hash must be deterministic");
+        Check(crypto.Hash(json) != crypto.Hash(json.Replace("1234", "9999")), "hash must change when data changes");
+
+        Console.WriteLine("Save encryption: OK");
     }
 }

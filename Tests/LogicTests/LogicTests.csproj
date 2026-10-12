@@ -16,6 +16,7 @@
     <Compile Include="../../Assets/Scripts/Gameplay/LevelSolver.cs" />
     <Compile Include="../../Assets/Scripts/Gameplay/LevelDataGenerator.cs" />
     <Compile Include="../../Assets/Scripts/Localization/LocalizationTable.cs" />
+    <Compile Include="../../Assets/Scripts/Save/SaveCrypto.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../Assets/Resources/Levels/*.json" LinkBase="Levels" CopyToOutputDirectory="PreserveNewest" />

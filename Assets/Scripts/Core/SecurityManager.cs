@@ -67,8 +67,11 @@ namespace WaterSort.Core
 
         #region Data Encryption
 
+        private SaveCrypto _crypto;
+        private SaveCrypto Crypto => _crypto ?? (_crypto = new SaveCrypto(ENCRYPTION_KEY, HASH_SALT));
+
         /// <summary>
-        /// Encrypt string data using AES-256
+        /// Encrypt string data using AES-256 (random IV per value)
         /// </summary>
         public string Encrypt(string plainText)
         {
@@ -77,26 +80,7 @@ namespace WaterSort.Core
 
             try
             {
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = GetKey();
-                    aes.GenerateIV(); // Fresh random IV per value: equal values no longer encrypt identically
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    using (ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
-                    {
-                        byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
-                        byte[] encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-
-                        // Stored as IV + ciphertext
-                        byte[] output = new byte[aes.IV.Length + encryptedBytes.Length];
-                        Buffer.BlockCopy(aes.IV, 0, output, 0, aes.IV.Length);
-                        Buffer.BlockCopy(encryptedBytes, 0, output, aes.IV.Length, encryptedBytes.Length);
-
-                        return Convert.ToBase64String(output);
-                    }
-                }
+                return Crypto.Encrypt(plainText);
             }
             catch (Exception ex)
             {
@@ -115,53 +99,12 @@ namespace WaterSort.Core
 
             try
             {
-                byte[] input = Convert.FromBase64String(encryptedText);
-                const int ivLength = 16; // AES block size
-
-                if (input.Length <= ivLength)
-                    throw new CryptographicException("Encrypted value is too short");
-
-                byte[] iv = new byte[ivLength];
-                Buffer.BlockCopy(input, 0, iv, 0, ivLength);
-
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = GetKey();
-                    aes.IV = iv;
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    using (ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
-                    {
-                        byte[] decryptedBytes = decryptor.TransformFinalBlock(input, ivLength, input.Length - ivLength);
-                        return Encoding.UTF8.GetString(decryptedBytes);
-                    }
-                }
+                return Crypto.Decrypt(encryptedText);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Decryption failed: {ex.Message}");
                 return encryptedText;
-            }
-        }
-
-        // PBKDF2 with 10000 iterations is slow; derive once and reuse for every save/load
-        private byte[] _cachedKey;
-
-        private byte[] GetKey()
-        {
-            if (_cachedKey == null)
-                _cachedKey = DeriveKeyFromPassword(ENCRYPTION_KEY);
-            return _cachedKey;
-        }
-
-        private byte[] DeriveKeyFromPassword(string password)
-        {
-            byte[] salt = Encoding.UTF8.GetBytes(HASH_SALT);
-
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
-            {
-                return deriveBytes.GetBytes(32); // 256-bit key
             }
         }
 
@@ -174,19 +117,7 @@ namespace WaterSort.Core
         /// </summary>
         public string GenerateHash(string data)
         {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                string saltedData = data + HASH_SALT;
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(saltedData));
-
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-
-                return builder.ToString();
-            }
+            return Crypto.Hash(data);
         }
 
         /// <summary>
