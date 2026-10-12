@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using WaterSort.Core;
 
 public static class Program
@@ -25,6 +27,7 @@ public static class Program
         HandcraftedLevels();
         GeneratedLevels(1000);
         ReverseMoveFallback();
+        Localization();
 
         Console.WriteLine(_failures == 0 ? "ALL TESTS PASSED" : $"{_failures} FAILURE(S)");
         return _failures == 0 ? 0 : 1;
@@ -159,5 +162,44 @@ public static class Program
             }
         }
         Console.WriteLine("Reverse-move fallback: OK");
+    }
+
+    private static void Localization()
+    {
+        var placeholder = new Regex(@"\{\d+\}");
+
+        foreach (var entry in LocalizationTable.Entries)
+        {
+            Check(entry.Value.Length == 2 && entry.Value.All(v => !string.IsNullOrWhiteSpace(v)),
+                $"'{entry.Key}' needs Turkish and English text");
+            if (entry.Value.Length != 2) continue;
+
+            var tr = placeholder.Matches(entry.Value[0]).Select(m => m.Value).OrderBy(v => v);
+            var en = placeholder.Matches(entry.Value[1]).Select(m => m.Value).OrderBy(v => v);
+            Check(tr.SequenceEqual(en), $"'{entry.Key}' has different placeholders in Turkish and English");
+
+            foreach (var text in entry.Value)
+            {
+                try { string.Format(text, 1, 2, 3); }
+                catch (FormatException) { Check(false, $"'{entry.Key}' is not a valid format string: {text}"); }
+            }
+        }
+
+        // Every key referenced from code must exist
+        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Assets"));
+        var keyPattern = new Regex(@"(?:Loc\.Get\(|LocalizedText\(|Key\s*=\s*|Button\([^,]+,\s*""[^""]+"",\s*|Toggle\([^,]+,\s*""[^""]+"",\s*|Text\([^,]+,\s*""[^""]+"",\s*)""([a-z_]+\.[a-z_.]+)""");
+        int used = 0;
+        foreach (var file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+        {
+            foreach (Match match in keyPattern.Matches(File.ReadAllText(file)))
+            {
+                used++;
+                string key = match.Groups[1].Value;
+                Check(LocalizationTable.Entries.ContainsKey(key), $"{Path.GetFileName(file)} uses missing localization key '{key}'");
+            }
+        }
+        Check(used > 20, $"expected to find localization keys in code, found {used}");
+
+        Console.WriteLine($"Localization: {LocalizationTable.Entries.Count} keys, {used} uses checked");
     }
 }

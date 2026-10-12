@@ -411,7 +411,7 @@ namespace WaterSort.Core
             _tubes[move.From].PlayHintAnimation();
             _tubes[move.To].PlayHintAnimation(0.4f);
 
-            UIManager.Instance?.ShowMessage($"İpucu: {move.From + 1}. tüpten {move.To + 1}. tüpe dök", 3f);
+            UIManager.Instance?.ShowMessage(Loc.Get("hint.move", move.From + 1, move.To + 1), 3f);
             return true;
         }
 

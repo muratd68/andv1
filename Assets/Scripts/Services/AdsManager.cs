@@ -311,7 +311,7 @@ namespace WaterSort.Core
                 LoadRewardedAd(); // Try to load for next time
 
                 // Show error to user
-                UIManager.Instance.ShowMessage("İnternet bağlantınızı kontrol edin");
+                UIManager.Instance.ShowMessage(Loc.Get("ads.no_connection"));
             }
             */
 
@@ -341,7 +341,7 @@ namespace WaterSort.Core
             // Load next ad
             LoadRewardedAd();
 
-            UIManager.Instance.ShowMessage("Reklam yüklenemedi");
+            UIManager.Instance?.ShowMessage(Loc.Get("ads.load_failed"));
         }
 
         #endregion

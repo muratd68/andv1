@@ -411,12 +411,12 @@ namespace WaterSort.EditorTools
             var column = CreateColumn(root, "Buttons", 28f);
             Place(column, new Vector2(0.5f, 0.5f), new Vector2(0f, -260f), new Vector2(700f, 1000f));
 
-            menu.PlayButton = CreateButton(column, "PlayButton", "Oyna", true, 150f);
-            menu.ContinueButton = CreateButton(column, "ContinueButton", "Devam Et", false, 120f);
-            menu.LevelSelectButton = CreateButton(column, "LevelSelectButton", "Seviye Seç", false, 120f);
-            menu.DailyRewardButton = CreateButton(column, "DailyRewardButton", "Günlük Ödül", false, 120f);
-            menu.SettingsButton = CreateButton(column, "SettingsButton", "Ayarlar", false, 120f);
-            menu.NoAdsButton = CreateButton(column, "NoAdsButton", "Reklamları Kaldır", false, 120f);
+            menu.PlayButton = CreateButton(column, "PlayButton", "menu.play", true, 150f);
+            menu.ContinueButton = CreateButton(column, "ContinueButton", "menu.continue", false, 120f);
+            menu.LevelSelectButton = CreateButton(column, "LevelSelectButton", "menu.level_select", false, 120f);
+            menu.DailyRewardButton = CreateButton(column, "DailyRewardButton", "menu.daily", false, 120f);
+            menu.SettingsButton = CreateButton(column, "SettingsButton", "menu.settings", false, 120f);
+            menu.NoAdsButton = CreateButton(column, "NoAdsButton", "menu.no_ads", false, 120f);
 
             // Green dot on the daily reward button when it can be claimed
             var dot = new GameObject("AvailableIndicator", typeof(RectTransform)).AddComponent<Image>();
@@ -429,19 +429,20 @@ namespace WaterSort.EditorTools
 
             // Settings popup
             RectTransform settingsCard = CreatePopup(root, "SettingsPopup", out GameObject settingsPopup);
-            CreateText(settingsCard, "Title", "Ayarlar", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
-            menu.SoundToggle = CreateToggle(settingsCard, "SoundToggle", "Ses Efektleri");
-            menu.MusicToggle = CreateToggle(settingsCard, "MusicToggle", "Müzik");
-            menu.HapticToggle = CreateToggle(settingsCard, "HapticToggle", "Titreşim");
-            menu.SettingsCloseButton = CreateButton(settingsCard, "CloseButton", "Kapat", true, 120f);
+            CreateLocalizedText(settingsCard, "Title", "settings.title", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+            menu.SoundToggle = CreateToggle(settingsCard, "SoundToggle", "settings.sound");
+            menu.MusicToggle = CreateToggle(settingsCard, "MusicToggle", "settings.music");
+            menu.HapticToggle = CreateToggle(settingsCard, "HapticToggle", "settings.haptics");
+            menu.LanguageButton = CreateButton(settingsCard, "LanguageButton", "settings.language", false, 120f);
+            menu.SettingsCloseButton = CreateButton(settingsCard, "CloseButton", "common.close", true, 120f);
             menu.SettingsPopup = settingsPopup;
 
             // Level select popup
             RectTransform levelCard = CreatePopup(root, "LevelSelectPopup", out GameObject levelPopup);
-            CreateText(levelCard, "Title", "Seviye Seç", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+            CreateLocalizedText(levelCard, "Title", "menu.level_select", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
             menu.LevelButtonContainer = CreateScrollGrid(levelCard, 900f);
             menu.LevelButtonPrefab = levelButtonPrefab;
-            menu.LevelSelectCloseButton = CreateButton(levelCard, "CloseButton", "Kapat", true, 120f);
+            menu.LevelSelectCloseButton = CreateButton(levelCard, "CloseButton", "common.close", true, 120f);
             menu.LevelSelectPopup = levelPopup;
 
             EditorSceneManager.SaveScene(scene, MainMenuScene);
@@ -475,18 +476,18 @@ namespace WaterSort.EditorTools
             var ui = root.GetComponentInParent<Canvas>().gameObject.AddComponent<UIManager>();
 
             // Top bar
-            ui.MenuButton = CreateButton(root, "MenuButton", "Menü", false, 110f);
+            ui.MenuButton = CreateButton(root, "MenuButton", "button.menu", false, 110f);
             Place((RectTransform)ui.MenuButton.transform, new Vector2(0f, 1f), new Vector2(170f, -90f), new Vector2(260f, 110f));
 
             ui.LevelText = CreateText(root, "LevelText", "Level 1", 96, Text, TextAlignmentOptions.Center);
             ui.LevelText.fontStyle = FontStyles.Bold;
             Place(ui.LevelText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -90f), new Vector2(500f, 120f));
 
-            ui.SettingsButton = CreateButton(root, "SettingsButton", "Ayarlar", false, 110f);
+            ui.SettingsButton = CreateButton(root, "SettingsButton", "menu.settings", false, 110f);
             Place((RectTransform)ui.SettingsButton.transform, new Vector2(1f, 1f), new Vector2(-170f, -90f), new Vector2(260f, 110f));
 
             // Counters
-            ui.MoveCountText = CreateText(root, "MoveCountText", "Hamle: 0", 52, Muted, TextAlignmentOptions.Center);
+            ui.MoveCountText = CreateText(root, "MoveCountText", "Moves: 0", 52, Muted, TextAlignmentOptions.Center);
             Place(ui.MoveCountText.rectTransform, new Vector2(0.5f, 1f), new Vector2(-300f, -215f), new Vector2(340f, 70f));
             ui.UndoCountText = CreateText(root, "UndoCountText", "Geri Al: 5", 52, Muted, TextAlignmentOptions.Center);
             Place(ui.UndoCountText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -215f), new Vector2(340f, 70f));
@@ -504,10 +505,10 @@ namespace WaterSort.EditorTools
             row.childForceExpandWidth = true;
             row.childForceExpandHeight = true;
 
-            ui.UndoButton = CreateButton(tools, "UndoButton", "Geri Al", false, 170f);
-            ui.RestartButton = CreateButton(tools, "RestartButton", "Yeniden", false, 170f);
-            ui.HintButton = CreateButton(tools, "HintButton", "İpucu", false, 170f);
-            ui.ExtraTubeButton = CreateButton(tools, "ExtraTubeButton", "+ Tüp", false, 170f);
+            ui.UndoButton = CreateButton(tools, "UndoButton", "button.undo", false, 170f, localize: false);
+            ui.RestartButton = CreateButton(tools, "RestartButton", "button.restart", false, 170f);
+            ui.HintButton = CreateButton(tools, "HintButton", "button.hint", false, 170f);
+            ui.ExtraTubeButton = CreateButton(tools, "ExtraTubeButton", "button.extra_tube", false, 170f);
 
             // Level complete popup
             RectTransform completeCard = CreatePopup(root, "LevelCompletePopup", out GameObject completePopup);
@@ -516,16 +517,17 @@ namespace WaterSort.EditorTools
             ui.LevelCompleteTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 200f;
             ui.LevelCompleteMoves = CreateText(completeCard, "Moves", "0 hamle ile tamamladınız!", 50, Muted, TextAlignmentOptions.Center);
             ui.LevelCompleteMoves.gameObject.AddComponent<LayoutElement>().preferredHeight = 90f;
-            ui.LevelCompleteNextButton = CreateButton(completeCard, "NextButton", "Sonraki Level", true, 150f);
+            ui.LevelCompleteNextButton = CreateButton(completeCard, "NextButton", "button.next_level", true, 150f);
             ui.LevelCompletePopup = completePopup;
 
             // Settings popup
             RectTransform settingsCard = CreatePopup(root, "SettingsPopup", out GameObject settingsPopup);
-            CreateText(settingsCard, "Title", "Ayarlar", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
-            ui.SoundToggle = CreateToggle(settingsCard, "SoundToggle", "Ses Efektleri");
-            ui.MusicToggle = CreateToggle(settingsCard, "MusicToggle", "Müzik");
-            ui.HapticToggle = CreateToggle(settingsCard, "HapticToggle", "Titreşim");
-            ui.SettingsCloseButton = CreateButton(settingsCard, "CloseButton", "Kapat", true, 120f);
+            CreateLocalizedText(settingsCard, "Title", "settings.title", 80, Text, TextAlignmentOptions.Center).gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+            ui.SoundToggle = CreateToggle(settingsCard, "SoundToggle", "settings.sound");
+            ui.MusicToggle = CreateToggle(settingsCard, "MusicToggle", "settings.music");
+            ui.HapticToggle = CreateToggle(settingsCard, "HapticToggle", "settings.haptics");
+            ui.LanguageButton = CreateButton(settingsCard, "LanguageButton", "settings.language", false, 120f);
+            ui.SettingsCloseButton = CreateButton(settingsCard, "CloseButton", "common.close", true, 120f);
             ui.SettingsPopup = settingsPopup;
 
             // Rewarded ad prompt
@@ -544,8 +546,8 @@ namespace WaterSort.EditorTools
             adRow.childControlHeight = true;
             adRow.childForceExpandWidth = true;
             adRow.childForceExpandHeight = true;
-            ui.RewardedAdPromptCancelButton = CreateButton(adButtons, "CancelButton", "Vazgeç", false, 130f);
-            ui.RewardedAdPromptWatchButton = CreateButton(adButtons, "WatchButton", "İzle", true, 130f);
+            ui.RewardedAdPromptCancelButton = CreateButton(adButtons, "CancelButton", "common.cancel", false, 130f);
+            ui.RewardedAdPromptWatchButton = CreateButton(adButtons, "WatchButton", "common.watch", true, 130f);
             ui.RewardedAdPromptPopup = adPopup;
 
             // Toast message (does not block taps)
@@ -607,7 +609,23 @@ namespace WaterSort.EditorTools
             return tmp;
         }
 
-        private static Button CreateButton(Transform parent, string name, string label, bool primary, float height)
+        /// <summary>
+        /// labelKey is a LocalizationTable key; the label gets a LocalizedText so it follows the language.
+        /// Pass localize = false for labels that code rewrites (e.g. the undo button).
+        /// </summary>
+        /// <summary>
+        /// Text showing a LocalizationTable entry (Turkish in the editor, follows the language at runtime)
+        /// </summary>
+        private static TextMeshProUGUI CreateLocalizedText(Transform parent, string name, string key, float size, Color color, TextAlignmentOptions alignment, bool localize = true)
+        {
+            string placeholder = LocalizationTable.Entries.TryGetValue(key, out string[] values) ? values[0] : key;
+            var text = CreateText(parent, name, placeholder, size, color, alignment);
+            if (localize)
+                text.gameObject.AddComponent<LocalizedText>().Key = key;
+            return text;
+        }
+
+        private static Button CreateButton(Transform parent, string name, string labelKey, bool primary, float height, bool localize = true)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -628,14 +646,14 @@ namespace WaterSort.EditorTools
             layout.preferredHeight = height;
             layout.minHeight = height;
 
-            var text = CreateText(go.transform, "Label", label, primary ? 60 : 50, primary ? AccentInk : Text, TextAlignmentOptions.Center);
+            var text = CreateLocalizedText(go.transform, "Label", labelKey, primary ? 60 : 50, primary ? AccentInk : Text, TextAlignmentOptions.Center, localize);
             text.fontStyle = FontStyles.Bold;
             Stretch(text.rectTransform, 12f);
 
             return button;
         }
 
-        private static Toggle CreateToggle(Transform parent, string name, string label)
+        private static Toggle CreateToggle(Transform parent, string name, string labelKey)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -654,7 +672,7 @@ namespace WaterSort.EditorTools
             check.color = Accent;
             Stretch(check.rectTransform, 10f);
 
-            var text = CreateText(go.transform, "Label", label, 54, Text, TextAlignmentOptions.MidlineLeft);
+            var text = CreateLocalizedText(go.transform, "Label", labelKey, 54, Text, TextAlignmentOptions.MidlineLeft);
             Place(text.rectTransform, new Vector2(0f, 0.5f), new Vector2(380f, 0f), new Vector2(560f, 100f));
 
             var toggle = go.AddComponent<Toggle>();

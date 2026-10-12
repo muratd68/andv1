@@ -30,6 +30,7 @@ namespace WaterSort.Core
         public Toggle MusicToggle;
         public Toggle HapticToggle;
         public Button SettingsCloseButton;
+        public Button LanguageButton;
 
         [Header("Level Select Popup")]
         public GameObject LevelSelectPopup;
@@ -38,6 +39,16 @@ namespace WaterSort.Core
         [Tooltip("Button prefab with a TextMeshProUGUI child for the level number")]
         public Button LevelButtonPrefab;
         public Button LevelSelectCloseButton;
+
+        private void OnEnable()
+        {
+            Loc.LanguageChanged += UpdateUI;
+        }
+
+        private void OnDisable()
+        {
+            Loc.LanguageChanged -= UpdateUI;
+        }
 
         private void Start()
         {
@@ -77,7 +88,7 @@ namespace WaterSort.Core
 
             if (CurrentLevelText != null)
             {
-                CurrentLevelText.text = $"Level {currentLevel + 1}";
+                CurrentLevelText.text = Loc.Get("hud.level", currentLevel + 1);
             }
 
             if (CoinText != null)
@@ -147,6 +158,9 @@ namespace WaterSort.Core
 
             if (SettingsCloseButton != null)
                 SettingsCloseButton.onClick.AddListener(() => SettingsPopup.SetActive(false));
+
+            if (LanguageButton != null)
+                LanguageButton.onClick.AddListener(Loc.ToggleLanguage);
         }
 
         private void OnSettingsClicked()

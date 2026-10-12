@@ -72,8 +72,8 @@ namespace WaterSort.Core
         public void ShowRewardedAdForUndo()
         {
             ShowPrompt(
-                "Geri Al Hakkı",
-                $"{UndoMovesPerAd} geri alma hakkı kazanmak için reklam izle",
+                Loc.Get("reward.undo.title"),
+                Loc.Get("reward.undo.message", UndoMovesPerAd),
                 () =>
                 {
                     // User accepted - show ad
@@ -82,7 +82,7 @@ namespace WaterSort.Core
                         // Reward earned
                         LevelManager.Instance.AddUndoMoves(UndoMovesPerAd);
 
-                        ShowMessage($"+{UndoMovesPerAd} Geri Alma Hakkı!");
+                        ShowMessage(Loc.Get("reward.undo.granted", UndoMovesPerAd));
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_undo", new System.Collections.Generic.Dictionary<string, object>
                         {
@@ -103,8 +103,8 @@ namespace WaterSort.Core
         public void ShowRewardedAdForExtraTube()
         {
             ShowPrompt(
-                "Ekstra Tüp",
-                "Geçici bir boş tüp eklemek için reklam izle",
+                Loc.Get("reward.extra_tube.title"),
+                Loc.Get("reward.extra_tube.message"),
                 () =>
                 {
                     // User accepted - show ad
@@ -113,7 +113,7 @@ namespace WaterSort.Core
                         // Reward earned
                         LevelManager.Instance.AddExtraTube();
 
-                        ShowMessage("Ekstra tüp eklendi!");
+                        ShowMessage(Loc.Get("reward.extra_tube.granted"));
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_extra_tube", null);
                     });
@@ -131,15 +131,15 @@ namespace WaterSort.Core
         public void ShowRewardedAdForSkip(Action onSkipped = null)
         {
             ShowPrompt(
-                "Seviyeyi Atla",
-                "Bu seviyeyi geçmek için reklam izle",
+                Loc.Get("reward.skip.title"),
+                Loc.Get("reward.skip.message"),
                 () =>
                 {
                     // User accepted - show ad
                     AdsManager.Instance.ShowRewardedAd(() =>
                     {
                         // Reward earned
-                        ShowMessage("Seviye atlandı!");
+                        ShowMessage(Loc.Get("reward.skip.granted"));
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_skip", new System.Collections.Generic.Dictionary<string, object>
                         {
@@ -164,13 +164,13 @@ namespace WaterSort.Core
             // Don't make the player watch an ad for a hint that cannot exist
             if (LevelManager.Instance != null && !LevelManager.Instance.HasSolution())
             {
-                ShowMessage("Bu durumdan çözüm yok - geri al veya yeniden başla");
+                ShowMessage(Loc.Get("hint.unsolvable"));
                 return;
             }
 
             ShowPrompt(
-                "İpucu",
-                "Bir sonraki hamle için ipucu almak için reklam izle",
+                Loc.Get("reward.hint.title"),
+                Loc.Get("reward.hint.message"),
                 () =>
                 {
                     // User accepted - show ad
@@ -190,7 +190,7 @@ namespace WaterSort.Core
 
             if (!LevelManager.Instance.ShowHint())
             {
-                ShowMessage("Bu durumdan çözüm yok - geri al veya yeniden başla");
+                ShowMessage(Loc.Get("hint.unsolvable"));
             }
         }
 
@@ -204,8 +204,8 @@ namespace WaterSort.Core
         public void ShowDailyRewardAd(Action onClaimed = null)
         {
             ShowPrompt(
-                "Günlük Ödül",
-                $"Günlük {CoinsPerDailyReward} coin kazanmak için reklam izle",
+                Loc.Get("reward.daily.title"),
+                Loc.Get("reward.daily.message", CoinsPerDailyReward),
                 () =>
                 {
                     // User accepted - show ad
@@ -215,7 +215,7 @@ namespace WaterSort.Core
                         SaveManager.Instance.AddCoins(CoinsPerDailyReward);
                         SaveManager.Instance.SetLastDailyRewardDate(System.DateTime.Now);
 
-                        ShowMessage($"+{CoinsPerDailyReward} Coin!");
+                        ShowMessage(Loc.Get("reward.daily.granted", CoinsPerDailyReward));
                         onClaimed?.Invoke();
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_daily", new System.Collections.Generic.Dictionary<string, object>
