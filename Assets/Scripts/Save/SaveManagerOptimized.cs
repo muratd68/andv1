@@ -347,16 +347,4 @@ namespace WaterSort.Core
 
         #endregion
     }
-
-    [System.Serializable]
-    public class PlayerData
-    {
-        public int CurrentLevel;
-        public int HighestLevel;
-        public int Coins;
-        public int TotalMoves;
-        public float TotalPlaytime;
-        public DateTime LastDailyRewardDate;
-        public bool NoAdsPurchased;
-    }
 }
