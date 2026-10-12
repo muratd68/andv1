@@ -1,14 +1,23 @@
 using UnityEngine;
 using System;
 using System.Collections;
-// using GoogleMobileAds.Api; // Uncomment when AdMob SDK is imported
+using System.Collections.Generic;
+#if WATERSORT_ADMOB
+using GoogleMobileAds.Api;
+#endif
 
 namespace WaterSort.Core
 {
     /// <summary>
-    /// Central ad management system
-    /// Handles interstitial, rewarded, and banner ads
-    /// TODO: Import Google Mobile Ads SDK and uncomment AdMob code
+    /// Central ad management system: interstitial, rewarded and banner ads.
+    ///
+    /// Without the Google Mobile Ads SDK the ads are simulated (mock) so the game
+    /// flow can be tested. With the SDK imported, the scripting define symbol
+    /// WATERSORT_ADMOB enables real AdMob ads (Water Sort > Projeyi Kur adds it
+    /// automatically when the SDK is detected). Requires Google Mobile Ads Unity plugin 8.0+.
+    ///
+    /// "Remove Ads" (IAP) removes interstitials and the banner; rewarded ads stay,
+    /// because the player chooses to watch them for a reward.
     /// </summary>
     public class AdsManager : MonoBehaviour
     {
@@ -27,20 +36,23 @@ namespace WaterSort.Core
             }
         }
 
-        [Header("Ad Unit IDs - REPLACE WITH YOUR IDS")]
-        [Tooltip("AdMob App ID")]
-        public string AppId = "ca-app-pub-3940256099942544~3347511713"; // Test ID
+        [Header("Ad Unit IDs - Google test IDs, REPLACE WITH YOUR IDS before release")]
+        [Tooltip("Android interstitial ad unit")]
+        public string AndroidInterstitialId = "ca-app-pub-3940256099942544/1033173712";
+        [Tooltip("Android rewarded ad unit")]
+        public string AndroidRewardedId = "ca-app-pub-3940256099942544/5224354917";
+        [Tooltip("Android banner ad unit")]
+        public string AndroidBannerId = "ca-app-pub-3940256099942544/6300978111";
 
-        [Tooltip("Interstitial Ad Unit ID")]
-        public string InterstitialAdUnitId = "ca-app-pub-3940256099942544/1033173712"; // Test ID
-
-        [Tooltip("Rewarded Ad Unit ID")]
-        public string RewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"; // Test ID
-
-        [Tooltip("Banner Ad Unit ID")]
-        public string BannerAdUnitId = "ca-app-pub-3940256099942544/6300978111"; // Test ID
+        [Tooltip("iOS interstitial ad unit")]
+        public string IosInterstitialId = "ca-app-pub-3940256099942544/4411468910";
+        [Tooltip("iOS rewarded ad unit")]
+        public string IosRewardedId = "ca-app-pub-3940256099942544/1712485313";
+        [Tooltip("iOS banner ad unit")]
+        public string IosBannerId = "ca-app-pub-3940256099942544/2934735716";
 
         [Header("Ad Settings")]
+        [Tooltip("Master switch. When off, rewarded actions are granted without an ad (for testing).")]
         public bool EnableAds = true;
         public bool ShowBanner = true;
         public int InterstitialFrequency = 2; // Show after every N levels
@@ -49,17 +61,28 @@ namespace WaterSort.Core
         [Header("Remote Config Override")]
         public bool UseRemoteConfig = true;
 
-        // Ad instances (uncomment when AdMob is imported)
-        // private InterstitialAd _interstitialAd;
-        // private RewardedAd _rewardedAd;
-        // private BannerView _bannerView;
+        [Header("Mock (no SDK)")]
+        public float MockInterstitialSeconds = 2f;
+        public float MockRewardedSeconds = 3f;
+
+        /// <summary>
+        /// True after the "Remove Ads" purchase: no interstitials, no banner
+        /// </summary>
+        public bool AdsRemoved { get; private set; }
 
         private float _lastInterstitialTime = 0f;
         private int _levelsSinceLastInterstitial = 0;
-        private Action _onInterstitialClosed;
-        private Action _onRewardedCompleted;
-
         private bool _isInitialized = false;
+
+        // SDK callbacks can arrive on a background thread; run them in Update instead
+        private readonly Queue<Action> _mainThreadActions = new Queue<Action>();
+
+#if WATERSORT_ADMOB
+        private InterstitialAd _interstitialAd;
+        private RewardedAd _rewardedAd;
+        private BannerView _bannerView;
+        private Action _onInterstitialClosed;
+#endif
 
         private void Awake()
         {
@@ -73,17 +96,37 @@ namespace WaterSort.Core
             DontDestroyOnLoad(gameObject);
         }
 
+        private void Update()
+        {
+            while (true)
+            {
+                Action action;
+                lock (_mainThreadActions)
+                {
+                    if (_mainThreadActions.Count == 0) break;
+                    action = _mainThreadActions.Dequeue();
+                }
+                action?.Invoke();
+            }
+        }
+
+        private void RunOnMainThread(Action action)
+        {
+            lock (_mainThreadActions)
+            {
+                _mainThreadActions.Enqueue(action);
+            }
+        }
+
         public void Initialize()
         {
             if (_isInitialized) return;
+            _isInitialized = true;
 
             Debug.Log("Initializing Ads Manager...");
 
-            // Respect a "No Ads" purchase from a previous session
-            if (SaveManager.Instance.HasNoAdsPurchased())
-            {
-                EnableAds = false;
-            }
+            // Respect a "Remove Ads" purchase from a previous session
+            AdsRemoved = SaveManager.Instance.HasNoAdsPurchased();
 
             if (!EnableAds)
             {
@@ -91,116 +134,64 @@ namespace WaterSort.Core
                 return;
             }
 
-            // Load settings from Remote Config
             if (UseRemoteConfig)
             {
                 LoadRemoteConfig();
+                // Pick up fetched values when Remote Config finishes
+                RemoteConfigManager.Instance.ConfigUpdated += LoadRemoteConfig;
             }
 
-            // Initialize AdMob
-            InitializeAdMob();
-
-            _isInitialized = true;
-        }
-
-        private void InitializeAdMob()
-        {
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
-            MobileAds.Initialize(initStatus =>
-            {
-                Debug.Log("AdMob initialized");
-                LoadInterstitialAd();
-                LoadRewardedAd();
-
-                if (ShowBanner)
-                {
-                    ShowBannerAd();
-                }
-            });
-            */
-
-            Debug.Log("[MOCK] AdMob would be initialized here");
+            InitializeSdk();
         }
 
         private void LoadRemoteConfig()
         {
-            // Load from RemoteConfigManager
-            InterstitialFrequency = RemoteConfigManager.Instance.GetInt("interstitial_frequency", 2);
-            MinTimeBetweenInterstitials = RemoteConfigManager.Instance.GetFloat("min_time_between_interstitials", 30f);
-            ShowBanner = RemoteConfigManager.Instance.GetBool("show_banner", true);
+            InterstitialFrequency = RemoteConfigManager.Instance.GetInt("interstitial_frequency", InterstitialFrequency);
+            MinTimeBetweenInterstitials = RemoteConfigManager.Instance.GetFloat("min_time_between_interstitials", MinTimeBetweenInterstitials);
+            ShowBanner = RemoteConfigManager.Instance.GetBool("show_banner", ShowBanner);
+        }
+
+        /// <summary>
+        /// Called after a successful "Remove Ads" purchase
+        /// </summary>
+        public void RemoveAds()
+        {
+            AdsRemoved = true;
+            DestroyBannerAd();
         }
 
         #region Interstitial Ads
 
-        private void LoadInterstitialAd()
-        {
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
-            if (_interstitialAd != null)
-            {
-                _interstitialAd.Destroy();
-            }
-
-            AdRequest request = new AdRequest.Builder().Build();
-
-            InterstitialAd.Load(InterstitialAdUnitId, request, (InterstitialAd ad, LoadAdError error) =>
-            {
-                if (error != null || ad == null)
-                {
-                    Debug.LogError("Interstitial ad failed to load: " + error);
-                    return;
-                }
-
-                Debug.Log("Interstitial ad loaded");
-                _interstitialAd = ad;
-
-                // Register events
-                _interstitialAd.OnAdFullScreenContentClosed += OnInterstitialClosed;
-                _interstitialAd.OnAdFullScreenContentFailed += OnInterstitialFailed;
-            });
-            */
-
-            Debug.Log("[MOCK] Loading interstitial ad");
-        }
-
         public void ShowInterstitial(Action onClosed = null)
         {
-            _onInterstitialClosed = onClosed;
-
-            if (!EnableAds || !CanShowInterstitial())
+            if (!EnableAds || AdsRemoved || !CanShowInterstitial())
             {
-                Debug.Log("Cannot show interstitial - conditions not met");
                 onClosed?.Invoke();
                 return;
             }
 
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
+            _lastInterstitialTime = Time.time;
+            _levelsSinceLastInterstitial = 0;
+
+#if WATERSORT_ADMOB
             if (_interstitialAd != null && _interstitialAd.CanShowAd())
             {
+                _onInterstitialClosed = onClosed;
                 _interstitialAd.Show();
-                _lastInterstitialTime = Time.time;
-                _levelsSinceLastInterstitial = 0;
-
-                AnalyticsManager.Instance.LogEvent("ad_interstitial_shown");
+                AnalyticsManager.Instance.LogEvent("ad_interstitial_shown", null);
             }
             else
             {
                 Debug.Log("Interstitial ad not ready");
-                LoadInterstitialAd(); // Try to load for next time
+                LoadInterstitialAd();
                 onClosed?.Invoke();
             }
-            */
-
+#else
             Debug.Log("[MOCK] Showing interstitial ad");
-            _lastInterstitialTime = Time.time;
-            _levelsSinceLastInterstitial = 0;
-
+            Toast.Show(Loc.Get("ads.mock"), MockInterstitialSeconds);
             AnalyticsManager.Instance.LogEvent("ad_interstitial_shown", null);
-
-            // Simulate ad closing after 2 seconds
-            StartCoroutine(SimulateAdClose(2f, onClosed));
+            StartCoroutine(InvokeAfter(MockInterstitialSeconds, onClosed));
+#endif
         }
 
         /// <summary>
@@ -226,65 +217,15 @@ namespace WaterSort.Core
             return true;
         }
 
-        private void OnInterstitialClosed()
-        {
-            Debug.Log("Interstitial ad closed");
-            _onInterstitialClosed?.Invoke();
-            _onInterstitialClosed = null;
-
-            // Load next ad
-            LoadInterstitialAd();
-        }
-
-        private void OnInterstitialFailed(/* AdError error */)
-        {
-            Debug.LogError("Interstitial ad failed to show");
-            _onInterstitialClosed?.Invoke();
-            _onInterstitialClosed = null;
-
-            // Load next ad
-            LoadInterstitialAd();
-        }
-
         #endregion
 
         #region Rewarded Ads
 
-        private void LoadRewardedAd()
-        {
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
-            if (_rewardedAd != null)
-            {
-                _rewardedAd.Destroy();
-            }
-
-            AdRequest request = new AdRequest.Builder().Build();
-
-            RewardedAd.Load(RewardedAdUnitId, request, (RewardedAd ad, LoadAdError error) =>
-            {
-                if (error != null || ad == null)
-                {
-                    Debug.LogError("Rewarded ad failed to load: " + error);
-                    return;
-                }
-
-                Debug.Log("Rewarded ad loaded");
-                _rewardedAd = ad;
-
-                // Register events
-                _rewardedAd.OnAdFullScreenContentClosed += OnRewardedClosed;
-                _rewardedAd.OnAdFullScreenContentFailed += OnRewardedFailed;
-            });
-            */
-
-            Debug.Log("[MOCK] Loading rewarded ad");
-        }
-
+        /// <summary>
+        /// Shows a rewarded ad; onRewardEarned runs only if the player watched it to the end
+        /// </summary>
         public void ShowRewardedAd(Action onRewardEarned)
         {
-            _onRewardedCompleted = onRewardEarned;
-
             if (!EnableAds)
             {
                 Debug.Log("Ads disabled - granting reward anyway");
@@ -292,122 +233,144 @@ namespace WaterSort.Core
                 return;
             }
 
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
+#if WATERSORT_ADMOB
             if (_rewardedAd != null && _rewardedAd.CanShowAd())
             {
-                _rewardedAd.Show((Reward reward) =>
-                {
-                    Debug.Log("User earned reward: " + reward.Amount);
-                    _onRewardedCompleted?.Invoke();
-                    _onRewardedCompleted = null;
-                });
-
-                AnalyticsManager.Instance.LogEvent("ad_rewarded_shown");
+                AnalyticsManager.Instance.LogEvent("ad_rewarded_shown", null);
+                _rewardedAd.Show((Reward reward) => RunOnMainThread(onRewardEarned));
             }
             else
             {
                 Debug.Log("Rewarded ad not ready");
-                LoadRewardedAd(); // Try to load for next time
-
-                // Show error to user
-                UIManager.Instance.ShowMessage(Loc.Get("ads.no_connection"));
+                LoadRewardedAd();
+                Toast.Show(Loc.Get("ads.no_connection"));
             }
-            */
-
+#else
             Debug.Log("[MOCK] Showing rewarded ad");
-            AnalyticsManager.Instance.LogEvent("ad_rewarded_shown", new System.Collections.Generic.Dictionary<string, object>
-            {
-                { "placement", "generic" }
-            });
-
-            // Simulate ad completion after 3 seconds
-            StartCoroutine(SimulateAdClose(3f, onRewardEarned));
-        }
-
-        private void OnRewardedClosed()
-        {
-            Debug.Log("Rewarded ad closed");
-
-            // Load next ad
-            LoadRewardedAd();
-        }
-
-        private void OnRewardedFailed(/* AdError error */)
-        {
-            Debug.LogError("Rewarded ad failed to show");
-            _onRewardedCompleted = null;
-
-            // Load next ad
-            LoadRewardedAd();
-
-            UIManager.Instance?.ShowMessage(Loc.Get("ads.load_failed"));
+            Toast.Show(Loc.Get("ads.mock"), MockRewardedSeconds);
+            AnalyticsManager.Instance.LogEvent("ad_rewarded_shown", null);
+            StartCoroutine(InvokeAfter(MockRewardedSeconds, onRewardEarned));
+#endif
         }
 
         #endregion
 
         #region Banner Ads
 
-        private void ShowBannerAd()
-        {
-            if (!ShowBanner) return;
-
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
-            if (_bannerView != null)
-            {
-                _bannerView.Destroy();
-            }
-
-            _bannerView = new BannerView(BannerAdUnitId, AdSize.Banner, AdPosition.Bottom);
-
-            AdRequest request = new AdRequest.Builder().Build();
-            _bannerView.LoadAd(request);
-
-            Debug.Log("Banner ad loaded");
-            */
-
-            Debug.Log("[MOCK] Banner ad would be shown at bottom");
-        }
-
         public void HideBannerAd()
         {
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
-            if (_bannerView != null)
-            {
-                _bannerView.Hide();
-            }
-            */
-
-            Debug.Log("[MOCK] Hiding banner ad");
+#if WATERSORT_ADMOB
+            _bannerView?.Hide();
+#endif
         }
 
         public void DestroyBannerAd()
         {
-            // TODO: Uncomment when AdMob SDK is imported
-            /*
+#if WATERSORT_ADMOB
             if (_bannerView != null)
             {
                 _bannerView.Destroy();
                 _bannerView = null;
             }
-            */
-
-            Debug.Log("[MOCK] Destroying banner ad");
+#endif
         }
 
         #endregion
 
-        #region Mock/Testing
+        #region SDK
 
-        private IEnumerator SimulateAdClose(float delay, Action callback)
+#if WATERSORT_ADMOB
+        private string InterstitialId => Application.platform == RuntimePlatform.IPhonePlayer ? IosInterstitialId : AndroidInterstitialId;
+        private string RewardedId => Application.platform == RuntimePlatform.IPhonePlayer ? IosRewardedId : AndroidRewardedId;
+        private string BannerId => Application.platform == RuntimePlatform.IPhonePlayer ? IosBannerId : AndroidBannerId;
+
+        private void InitializeSdk()
         {
-            yield return new WaitForSeconds(delay);
+            MobileAds.RaiseAdEventsOnUnityMainThread = true;
+            MobileAds.Initialize(initStatus => RunOnMainThread(() =>
+            {
+                Debug.Log("AdMob initialized");
+                LoadInterstitialAd();
+                LoadRewardedAd();
+
+                if (ShowBanner && !AdsRemoved)
+                    ShowBannerAd();
+            }));
+        }
+
+        private void LoadInterstitialAd()
+        {
+            if (AdsRemoved) return;
+
+            _interstitialAd?.Destroy();
+            _interstitialAd = null;
+
+            InterstitialAd.Load(InterstitialId, new AdRequest(), (InterstitialAd ad, LoadAdError error) => RunOnMainThread(() =>
+            {
+                if (error != null || ad == null)
+                {
+                    Debug.LogWarning("Interstitial ad failed to load: " + error);
+                    return;
+                }
+
+                _interstitialAd = ad;
+                ad.OnAdFullScreenContentClosed += () => RunOnMainThread(OnInterstitialFinished);
+                ad.OnAdFullScreenContentFailed += adError => RunOnMainThread(OnInterstitialFinished);
+            }));
+        }
+
+        private void OnInterstitialFinished()
+        {
+            Action callback = _onInterstitialClosed;
+            _onInterstitialClosed = null;
+            callback?.Invoke();
+
+            LoadInterstitialAd();
+        }
+
+        private void LoadRewardedAd()
+        {
+            _rewardedAd?.Destroy();
+            _rewardedAd = null;
+
+            RewardedAd.Load(RewardedId, new AdRequest(), (RewardedAd ad, LoadAdError error) => RunOnMainThread(() =>
+            {
+                if (error != null || ad == null)
+                {
+                    Debug.LogWarning("Rewarded ad failed to load: " + error);
+                    return;
+                }
+
+                _rewardedAd = ad;
+                ad.OnAdFullScreenContentClosed += () => RunOnMainThread(LoadRewardedAd);
+                ad.OnAdFullScreenContentFailed += adError => RunOnMainThread(() =>
+                {
+                    Toast.Show(Loc.Get("ads.load_failed"));
+                    LoadRewardedAd();
+                });
+            }));
+        }
+
+        private void ShowBannerAd()
+        {
+            DestroyBannerAd();
+            _bannerView = new BannerView(BannerId, AdSize.Banner, AdPosition.Bottom);
+            _bannerView.LoadAd(new AdRequest());
+        }
+#else
+        private void InitializeSdk()
+        {
+            Debug.Log("[MOCK] Ads run in mock mode. Import the Google Mobile Ads SDK and run Water Sort > Projeyi Kur to enable AdMob.");
+        }
+#endif
+
+        #endregion
+
+        private IEnumerator InvokeAfter(float delay, Action callback)
+        {
+            yield return new WaitForSecondsRealtime(delay);
             callback?.Invoke();
         }
-
-        #endregion
 
         private void OnDestroy()
         {

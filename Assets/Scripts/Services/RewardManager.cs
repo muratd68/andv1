@@ -56,10 +56,7 @@ namespace WaterSort.Core
 
         private void ShowMessage(string message)
         {
-            if (UIManager.Instance != null)
-                UIManager.Instance.ShowMessage(message);
-            else
-                Debug.Log(message);
+            Toast.Show(message);
         }
 
         #endregion

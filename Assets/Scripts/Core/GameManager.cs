@@ -71,7 +71,10 @@ namespace WaterSort.Core
             // Initialize subsystems - the save must be loaded first so AdsManager
             // can see whether "No Ads" was purchased
             SaveManager.Instance.LoadGame();
+            AnalyticsManager.Instance.Initialize();
+            RemoteConfigManager.Instance.Initialize();
             AdsManager.Instance.Initialize();
+            IAPManager.Instance.Initialize();
 
             // When a scene is played directly in the editor, stay in it instead of jumping to the menu
             string activeScene = SceneManager.GetActiveScene().name;

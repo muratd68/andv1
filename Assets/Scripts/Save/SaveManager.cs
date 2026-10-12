@@ -294,8 +294,7 @@ namespace WaterSort.Core
             // Update ads manager
             if (purchased)
             {
-                AdsManager.Instance.EnableAds = false;
-                AdsManager.Instance.DestroyBannerAd();
+                AdsManager.Instance.RemoveAds();
             }
         }
 

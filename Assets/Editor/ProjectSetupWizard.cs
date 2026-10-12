@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -60,6 +62,15 @@ namespace WaterSort.EditorTools
         {
             if (!EnsureTmpEssentials())
                 return;
+
+            // Turn SDK code on/off before building scenes (changing defines recompiles scripts)
+            if (UpdateSdkDefines(showDialog: false))
+            {
+                EditorUtility.DisplayDialog("Water Sort Kurulum",
+                    "SDK ayarları güncellendi, scriptler yeniden derleniyor.\n\nDerleme bitince 'Water Sort > Projeyi Kur' menüsünü tekrar çalıştır.",
+                    "Tamam");
+                return;
+            }
 
             if (File.Exists(GameScene) &&
                 !EditorUtility.DisplayDialog("Water Sort Kurulum",
@@ -135,6 +146,95 @@ namespace WaterSort.EditorTools
 
             EditorSceneManager.OpenScene(BootstrapScene);
             EditorApplication.EnterPlaymode();
+        }
+
+        [MenuItem("Water Sort/SDK Tanımlarını Güncelle (AdMob, Firebase, IAP)", priority = 20)]
+        public static void UpdateSdkDefinesMenu()
+        {
+            UpdateSdkDefines(showDialog: true);
+        }
+
+        #endregion
+
+        #region SDK Defines
+
+        private struct SdkDefine
+        {
+            public string Symbol;
+            public string Name;
+            public string[] RequiredTypes;
+        }
+
+        private static readonly SdkDefine[] SdkDefines =
+        {
+            new SdkDefine
+            {
+                Symbol = "WATERSORT_ADMOB",
+                Name = "Google Mobile Ads (AdMob)",
+                RequiredTypes = new[] { "GoogleMobileAds.Api.MobileAds" }
+            },
+            new SdkDefine
+            {
+                Symbol = "WATERSORT_FIREBASE",
+                Name = "Firebase Analytics + Remote Config",
+                RequiredTypes = new[] { "Firebase.Analytics.FirebaseAnalytics", "Firebase.RemoteConfig.FirebaseRemoteConfig", "Firebase.Extensions.TaskExtension" }
+            },
+            new SdkDefine
+            {
+                Symbol = "WATERSORT_IAP",
+                Name = "Unity In-App Purchasing",
+                RequiredTypes = new[] { "UnityEngine.Purchasing.UnityPurchasing", "Unity.Services.Core.UnityServices" }
+            }
+        };
+
+        private static readonly BuildTargetGroup[] DefineTargets =
+        {
+            BuildTargetGroup.Android, BuildTargetGroup.iOS, BuildTargetGroup.Standalone
+        };
+
+        /// <summary>
+        /// Adds the define of every SDK that is installed and removes the ones that are not
+        /// (a define without its SDK would break compilation). Returns true if anything changed.
+        /// </summary>
+        private static bool UpdateSdkDefines(bool showDialog)
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            bool changed = false;
+            var report = new System.Text.StringBuilder();
+
+            foreach (BuildTargetGroup group in DefineTargets)
+            {
+                var symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(group)
+                    .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .ToList();
+                string original = string.Join(";", symbols);
+
+                foreach (var sdk in SdkDefines)
+                {
+                    bool installed = sdk.RequiredTypes.All(type => assemblies.Any(a => a.GetType(type, false) != null));
+                    symbols.Remove(sdk.Symbol);
+                    if (installed)
+                        symbols.Add(sdk.Symbol);
+
+                    if (group == BuildTargetGroup.Android)
+                        report.AppendLine($"{(installed ? "✓" : "✗")} {sdk.Name}{(installed ? "" : " - kurulu değil, test modu")}");
+                }
+
+                string updated = string.Join(";", symbols);
+                if (updated != original)
+                {
+                    PlayerSettings.SetScriptingDefineSymbolsForGroup(group, updated);
+                    changed = true;
+                }
+            }
+
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog("Water Sort SDK", report + (changed ? "\nAyarlar güncellendi, scriptler yeniden derlenecek." : "\nDeğişiklik yok."), "Tamam");
+            }
+
+            return changed;
         }
 
         #endregion
@@ -246,7 +346,7 @@ namespace WaterSort.EditorTools
         private static Sprite SaveSprite(Texture2D tex, string path, Vector2 pivot)
         {
             File.WriteAllBytes(path, tex.EncodeToPNG());
-            Object.DestroyImmediate(tex);
+            UnityEngine.Object.DestroyImmediate(tex);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
 
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
@@ -338,7 +438,7 @@ namespace WaterSort.EditorTools
         private static GameObject SavePrefab(GameObject go, string path)
         {
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
             return prefab;
         }
 
@@ -409,7 +509,7 @@ namespace WaterSort.EditorTools
 
             // Buttons
             var column = CreateColumn(root, "Buttons", 28f);
-            Place(column, new Vector2(0.5f, 0.5f), new Vector2(0f, -260f), new Vector2(700f, 1000f));
+            Place(column, new Vector2(0.5f, 0.5f), new Vector2(0f, -300f), new Vector2(700f, 1100f));
 
             menu.PlayButton = CreateButton(column, "PlayButton", "menu.play", true, 150f);
             menu.ContinueButton = CreateButton(column, "ContinueButton", "menu.continue", false, 120f);
@@ -417,6 +517,7 @@ namespace WaterSort.EditorTools
             menu.DailyRewardButton = CreateButton(column, "DailyRewardButton", "menu.daily", false, 120f);
             menu.SettingsButton = CreateButton(column, "SettingsButton", "menu.settings", false, 120f);
             menu.NoAdsButton = CreateButton(column, "NoAdsButton", "menu.no_ads", false, 120f);
+            menu.RestorePurchasesButton = CreateButton(column, "RestorePurchasesButton", "menu.restore", false, 100f);
 
             // Green dot on the daily reward button when it can be claimed
             var dot = new GameObject("AvailableIndicator", typeof(RectTransform)).AddComponent<Image>();
@@ -444,6 +545,11 @@ namespace WaterSort.EditorTools
             menu.LevelButtonPrefab = levelButtonPrefab;
             menu.LevelSelectCloseButton = CreateButton(levelCard, "CloseButton", "common.close", true, 120f);
             menu.LevelSelectPopup = levelPopup;
+
+            // Toast message (does not block taps)
+            CreateToast(root, out GameObject menuToast, out TextMeshProUGUI menuToastText);
+            menu.MessagePopup = menuToast;
+            menu.MessageText = menuToastText;
 
             EditorSceneManager.SaveScene(scene, MainMenuScene);
         }
@@ -551,17 +657,9 @@ namespace WaterSort.EditorTools
             ui.RewardedAdPromptPopup = adPopup;
 
             // Toast message (does not block taps)
-            var toast = new GameObject("MessagePopup", typeof(RectTransform)).AddComponent<Image>();
-            toast.transform.SetParent(root, false);
-            toast.sprite = UiSprite();
-            toast.type = Image.Type.Sliced;
-            toast.color = Text;
-            toast.raycastTarget = false;
-            Place(toast.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 360f), new Vector2(860f, 140f));
-            ui.MessageText = CreateText(toast.transform, "MessageText", "", 46, Ink, TextAlignmentOptions.Center);
-            ui.MessageText.raycastTarget = false;
-            Stretch(ui.MessageText.rectTransform, 24f);
-            ui.MessagePopup = toast.gameObject;
+            CreateToast(root, out GameObject gameToast, out TextMeshProUGUI gameToastText);
+            ui.MessagePopup = gameToast;
+            ui.MessageText = gameToastText;
 
             EditorSceneManager.SaveScene(scene, GameScene);
         }
@@ -765,6 +863,21 @@ namespace WaterSort.EditorTools
             scroll.viewport = viewport;
             scroll.content = content;
             return content;
+        }
+
+        private static void CreateToast(Transform parent, out GameObject popup, out TextMeshProUGUI text)
+        {
+            var toast = new GameObject("MessagePopup", typeof(RectTransform)).AddComponent<Image>();
+            toast.transform.SetParent(parent, false);
+            toast.sprite = UiSprite();
+            toast.type = Image.Type.Sliced;
+            toast.color = Text;
+            toast.raycastTarget = false;
+            Place(toast.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 360f), new Vector2(860f, 140f));
+
+            text = CreateText(toast.transform, "MessageText", "", 46, Ink, TextAlignmentOptions.Center);
+            Stretch(text.rectTransform, 24f);
+            popup = toast.gameObject;
         }
 
         private static void Place(RectTransform rect, Vector2 anchor, Vector2 position, Vector2 size)

@@ -79,6 +79,7 @@ namespace WaterSort.Core
             // Ads and purchases
             { "ads.no_connection", new[] { "İnternet bağlantınızı kontrol edin", "Check your internet connection" } },
             { "ads.load_failed", new[] { "Reklam yüklenemedi", "The ad could not be loaded" } },
+            { "ads.mock", new[] { "Test reklamı oynatılıyor...", "Playing a test ad..." } },
             { "iap.no_ads_done", new[] { "Reklamlar kaldırıldı. Teşekkürler!", "Ads removed. Thank you!" } },
             { "iap.failed", new[] { "Satın alma tamamlanamadı", "The purchase was not completed" } },
             { "iap.unavailable", new[] { "Satın alma şu an kullanılamıyor", "Purchases are not available right now" } },

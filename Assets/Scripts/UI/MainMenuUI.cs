@@ -9,6 +9,8 @@ namespace WaterSort.Core
     /// </summary>
     public class MainMenuUI : MonoBehaviour
     {
+        public static MainMenuUI Instance { get; private set; }
+
         [Header("Buttons")]
         public Button PlayButton;
         public Button ContinueButton;
@@ -16,6 +18,7 @@ namespace WaterSort.Core
         public Button SettingsButton;
         public Button NoAdsButton;
         public Button DailyRewardButton;
+        public Button RestorePurchasesButton;
 
         [Header("Info")]
         public TextMeshProUGUI CurrentLevelText;
@@ -23,6 +26,10 @@ namespace WaterSort.Core
 
         [Header("Daily Reward Indicator")]
         public GameObject DailyRewardAvailableIndicator;
+
+        [Header("Message Toast")]
+        public GameObject MessagePopup;
+        public TextMeshProUGUI MessageText;
 
         [Header("Settings Popup")]
         public GameObject SettingsPopup;
@@ -40,14 +47,47 @@ namespace WaterSort.Core
         public Button LevelButtonPrefab;
         public Button LevelSelectCloseButton;
 
+        private void Awake()
+        {
+            Instance = this;
+        }
+
         private void OnEnable()
         {
             Loc.LanguageChanged += UpdateUI;
+            IAPManager.Instance.NoAdsOwned += UpdateUI;
         }
 
         private void OnDisable()
         {
             Loc.LanguageChanged -= UpdateUI;
+            if (IAPManager.Exists)
+                IAPManager.Instance.NoAdsOwned -= UpdateUI;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        public void ShowMessage(string message, float duration = 2f)
+        {
+            if (MessagePopup == null || MessageText == null)
+            {
+                Debug.Log(message);
+                return;
+            }
+
+            MessageText.text = message;
+            MessagePopup.SetActive(true);
+            CancelInvoke(nameof(HideMessage));
+            Invoke(nameof(HideMessage), duration);
+        }
+
+        private void HideMessage()
+        {
+            if (MessagePopup != null)
+                MessagePopup.SetActive(false);
         }
 
         private void Start()
@@ -58,6 +98,7 @@ namespace WaterSort.Core
             CheckDailyReward();
 
             if (SettingsPopup != null) SettingsPopup.SetActive(false);
+            if (MessagePopup != null) MessagePopup.SetActive(false);
             if (LevelSelectPopup != null) LevelSelectPopup.SetActive(false);
         }
 
@@ -80,6 +121,9 @@ namespace WaterSort.Core
 
             if (DailyRewardButton != null)
                 DailyRewardButton.onClick.AddListener(OnDailyRewardClicked);
+
+            if (RestorePurchasesButton != null)
+                RestorePurchasesButton.onClick.AddListener(() => IAPManager.Instance.RestorePurchases());
         }
 
         private void UpdateUI()
@@ -101,6 +145,12 @@ namespace WaterSort.Core
             {
                 ContinueButton.gameObject.SetActive(currentLevel > 0);
             }
+
+            bool adsRemoved = SaveManager.Instance.HasNoAdsPurchased();
+            if (NoAdsButton != null)
+                NoAdsButton.gameObject.SetActive(!adsRemoved);
+            if (RestorePurchasesButton != null)
+                RestorePurchasesButton.gameObject.SetActive(!adsRemoved && IAPManager.Instance.NeedsRestoreButton);
         }
 
         private void CheckDailyReward()
@@ -221,8 +271,7 @@ namespace WaterSort.Core
 
         private void OnNoAdsClicked()
         {
-            // TODO: Show IAP purchase screen
-            Debug.Log("No Ads Purchase - TODO: Implement IAP");
+            IAPManager.Instance.BuyNoAds();
         }
 
         private void OnDailyRewardClicked()
