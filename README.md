@@ -16,35 +16,34 @@
 - [Monetization Stratejisi](#-monetization-stratejisi)
 - [Test Etme](#-test-etme)
 - [Build Alma](#-build-alma)
-- [TODO / Geliştirme Planı](#-todo--geliştirme-planı)
+- [Yayın Öncesi Yapılacaklar](#-yayın-öncesi-yapılacaklar)
 
 ---
 
 ## ✨ Özellikler
 
 ### Oynanış
-- **Tek parmak kontrolü** - Tap to pour mekanikli basit kontrol
-- **1000+ seviye** - Prosedürel seviye üretimi ile sonsuz içerik
-- **Zorluk eğrisi** - Kolay başlangıçtan zor seviyelere kademeli geçiş
-- **Undo sistemi** - Geri alma haklarıyla kullanıcı dostu deneyim
-- **Extra tüp** - Zor seviyelerde yardımcı mekanikler
+- **Tek parmak kontrolü** - Dokun, seç, dök
+- **1000+ seviye** - Prosedürel üretim; her seviye çözücü ile doğrulanır, her açılışta aynı gelir
+- **Zorluk eğrisi** - 2 renkten 12 renge kademeli geçiş
+- **Geri alma** - Seviye başına 5 hak, sonrası ödüllü reklamla
+- **İpucu** - Çözücü bir sonraki doğru hamleyi gösterir
+- **Ekstra tüp** - Zor seviyelerde ödüllü reklamla boş tüp
+- **Seviye seçme, ayarlar, günlük ödül**
+- **Türkçe ve İngilizce** - Cihaz diline göre otomatik, ayarlardan değiştirilebilir
 
 ### Monetization (Para Kazanma)
-- **Interstitial Ads** - Her 2-3 seviyede bir gösterilen tam ekran reklamlar
-- **Rewarded Ads** - Ödül karşılığı izlenen reklamlar:
-  - Geri alma hakkı kazanma
-  - Ekstra tüp ekleme
-  - Seviye atlama
-  - Günlük ödül alma
-- **Banner Ads** - Oyun ekranı altında sürekli banner
-- **IAP Ready** - Reklamsız sürüm satın alma altyapısı (TODO)
+- **Interstitial** - Her 2 seviyede bir, en az 30 sn arayla (Remote Config ile ayarlanır)
+- **Rewarded** - Geri alma hakkı, ekstra tüp, ipucu, seviye atlama, günlük ödül
+- **Banner** - Ekranın altında
+- **Reklamları Kaldır (IAP)** - Interstitial ve banner kalkar, ödüllü reklamlar isteğe bağlı kalır
 
 ### Teknik Özellikler
-- **Modüler mimari** - Kolay geliştirme ve bakım
-- **Save sistem** - PlayerPrefs tabanlı (cloud save için genişletilebilir)
-- **Analytics** - Firebase Analytics entegrasyonu için hazır (TODO: Firebase SDK)
-- **Remote Config** - A/B test ve canlı ayar değişikliği desteği (TODO: Firebase SDK)
-- **DOTween** - Akıcı animasyonlar için (TODO: Import package)
+- **Tek tıkla kurulum** - `Water Sort > Projeyi Kur` sahneleri, prefabları ve UI'ı oluşturur
+- **Şifreli kayıt** - AES-256 + bütünlük kontrolü, eski kayıtlar otomatik taşınır
+- **SDK'sız çalışır** - AdMob, Firebase ve IAP kurulu değilse test (mock) modunda çalışır
+- **Harici animasyon paketi gerekmez** - Yerleşik `SimpleTween`
+- **Testler** - Level/çözücü/şifreleme/çeviri testleri ve Unity'siz derleme kontrolü (`Tests/`)
 
 ---
 
@@ -52,66 +51,41 @@
 
 ### Gereksinimler
 
-- **Unity 2021.3** veya üzeri (LTS sürümü önerilir)
-- **Android SDK** (Android build için)
-- **Xcode** (iOS build için - sadece macOS)
+- **Unity 2021.3 LTS** (veya daha yeni)
+- **Android Build Support** (Android için) / **iOS Build Support** + Xcode (iOS için)
 
 ### Adım 1: Projeyi Aç
 
-1. Unity Hub'ı aç
-2. "Add" > "Add project from disk" seç
-3. Bu klasörü seç
+1. Unity Hub > "Add" > "Add project from disk" > bu klasörü seç
+2. Unity ilk açılışta paketleri (TextMeshPro, UI) kendisi indirir
 
-### Adım 2: Gerekli Paketleri İçe Aktar
+### Adım 2: Projeyi Kur (tek tık)
 
-#### DOTween (Animasyon)
-1. Asset Store'dan [DOTween (HOTween v2)](https://assetstore.unity.com/packages/tools/animation/dotween-hotween-v2-27676) indir
-2. Import et
-3. Tools > Demigiant > DOTween Utility Panel > Setup DOTween
+Menüden **Water Sort > Projeyi Kur (Sahneler + Prefablar)** seç.
 
-#### Google Mobile Ads SDK (AdMob)
-1. [Google Mobile Ads Unity Plugin](https://github.com/googleads/googleads-mobile-unity/releases) indir
-2. `.unitypackage` dosyasını Unity'de import et
-3. `Assets/Scripts/Services/AdsManager.cs` dosyasındaki yorumları kaldır
-4. AdMob App ID ve Ad Unit ID'lerini ayarla
+- İlk çalıştırmada TextMeshPro Essential Resources'ı içe aktarır; bitince menüyü **bir kez daha** çalıştır.
+- Oluşturulanlar:
+  - `Assets/Scenes/` - Bootstrap, MainMenu, Game (Build Settings'e eklenir)
+  - `Assets/Prefabs/Tube.prefab`, `Assets/Prefabs/UI/LevelButton.prefab`
+  - `Assets/Resources/Prefabs/LiquidSegment.prefab`
+  - `Assets/Art/Generated/` - tüp ve sıvı sprite'ları
+- Tüm UI referansları bağlanır; elle sürükle-bırak gerekmez.
 
-#### Firebase SDK (Opsiyonel - Analytics & Remote Config)
-1. [Firebase Console](https://console.firebase.google.com/) üzerinden proje oluştur
-2. `google-services.json` (Android) ve `GoogleService-Info.plist` (iOS) dosyalarını indir
-3. Firebase Unity SDK'yı import et
-4. Analytics ve RemoteConfig modüllerini ekle
-5. `Assets/Scripts/Services/AnalyticsManager.cs` ve `RemoteConfigManager.cs` dosyalarındaki yorumları kaldır
+### Adım 3: Oyna
 
-#### TextMeshPro
-1. Window > TextMeshPro > Import TMP Essential Resources
+**Water Sort > Oyunu Başlat** (Bootstrap sahnesini açıp Play'e basar).
 
-### Adım 3: Sahneleri Ayarla
+Reklamlar ve satın alma bu aşamada test modunda çalışır (ekranda "Test reklamı oynatılıyor..." görünür).
 
-1. `File > Build Settings` aç
-2. Şu sahneleri ekle (oluşturmanız gerekecek):
-   - `Scenes/Bootstrap`
-   - `Scenes/MainMenu`
-   - `Scenes/Game`
+### Adım 4 (Opsiyonel): SDK'lar
 
-### Adım 4: Prefab'ları Oluştur
+Her SDK bağımsızdır. Kurduktan sonra **Water Sort > SDK Tanımlarını Güncelle** çalıştır; araç kurulu SDK'yı algılar ve ilgili kodu açar (`WATERSORT_ADMOB`, `WATERSORT_FIREBASE`, `WATERSORT_IAP`).
 
-Aşağıdaki prefab'ları oluşturmanız gerekiyor:
-
-**Tube Prefab:**
-- Sprite Renderer (tüp görseli)
-- Box Collider 2D
-- TubeController script
-- Liquid Container (child Transform)
-
-**LiquidSegment Prefab:**
-- Sprite Renderer (kare/dikdörtgen)
-- Scale: 0.5x0.25
-
-**UI Popups:**
-- LevelCompletePopup
-- SettingsPopup
-- RewardedAdPromptPopup
-- MessagePopup (toast)
+| SDK | Nasıl kurulur | Senin yapman gereken |
+|-----|---------------|----------------------|
+| AdMob (Google Mobile Ads Unity 8.0+) | [Releases](https://github.com/googleads/googleads-mobile-unity/releases) sayfasından `.unitypackage` içe aktar | AdMob hesabı, App ID (`Assets > Google Mobile Ads > Settings`), `AdsManager` üzerindeki ad unit ID'leri |
+| Firebase (Analytics + Remote Config) | Firebase Unity SDK'dan `FirebaseAnalytics` ve `FirebaseRemoteConfig` paketleri | Firebase projesi, `google-services.json` / `GoogleService-Info.plist` dosyalarını `Assets/` içine koy |
+| Unity IAP 4.x | Package Manager > In-App Purchasing | Google Play Console / App Store Connect'te `com.yourcompany.watersort.noads` (veya `IAPManager.NoAdsProductId`) ürünü |
 
 ---
 
@@ -119,41 +93,36 @@ Aşağıdaki prefab'ları oluşturmanız gerekiyor:
 
 ```
 Assets/
+├── Editor/
+│   ├── ProjectSetupWizard.cs       # Water Sort menüsü: kurulum, oyunu başlat, SDK tanımları
+│   └── BuildOptimizer.cs           # Build ayarları optimizasyonu
 ├── Scripts/
 │   ├── Core/
-│   │   ├── GameManager.cs          # Global oyun yöneticisi
-│   │   ├── LevelManager.cs         # Level yükleme ve mantığı
-│   │   └── InputManager.cs         # Touch/click kontrolü
+│   │   ├── GameManager.cs          # Oyun durumu, sahne geçişi, ses/müzik
+│   │   ├── LevelManager.cs         # Level yükleme, hamle, geri alma, kazanma, kamera
+│   │   ├── InputManager.cs         # Dokunma/tıklama
+│   │   ├── SimpleTween.cs          # Yerleşik animasyon motoru
+│   │   ├── ObjectPoolManager.cs    # Nesne havuzu
+│   │   ├── PerformanceManager.cs   # FPS/kalite ayarı
+│   │   ├── SecurityManager.cs      # Şifreleme, anti-cheat
+│   │   └── DeviceCompatibilityManager.cs
 │   ├── Gameplay/
-│   │   ├── TubeController.cs       # Tüp mantığı
-│   │   ├── LevelData.cs           # Level veri yapısı
+│   │   ├── TubeController.cs       # Tüp mantığı ve animasyonları
+│   │   ├── LevelData.cs            # Level veri yapısı (JSON)
 │   │   ├── LevelDataGenerator.cs   # Prosedürel level üretimi
-│   │   └── MoveValidator.cs        # Hamle doğrulama
-│   ├── UI/
-│   │   ├── UIManager.cs            # UI yönetimi
-│   │   └── MainMenuUI.cs           # Ana menü
-│   ├── Services/
-│   │   ├── AdsManager.cs           # Reklam yönetimi
-│   │   ├── RewardManager.cs        # Ödüllü reklam mantığı
-│   │   ├── AnalyticsManager.cs     # Analytics tracking
-│   │   └── RemoteConfigManager.cs  # Remote config
-│   └── Save/
-│       └── SaveManager.cs          # Kayıt sistemi
-├── Scenes/
-│   ├── Bootstrap.unity             # İlk yüklenen sahne
-│   ├── MainMenu.unity              # Ana menü
-│   └── Game.unity                  # Oyun sahnesi
-├── Prefabs/
-│   ├── Tube.prefab                 # Tüp prefab'ı
-│   ├── LiquidSegment.prefab        # Sıvı segmenti
-│   └── UI/                         # UI popup'ları
-├── Resources/
-│   └── Levels/                     # Önceden hazırlanmış seviyeler
-│       ├── Level_0.json
-│       ├── Level_1.json
-│       └── Level_2.json
-└── Materials/
-    └── Sprites/                    # Sprite'lar
+│   │   ├── LevelSolver.cs          # Çözücü (doğrulama + ipucu)
+│   │   ├── LiquidColor.cs          # Renkler
+│   │   └── MoveValidator.cs        # Hamle kuralları
+│   ├── Localization/               # Türkçe/İngilizce metinler (Loc, LocalizedText)
+│   ├── UI/                         # UIManager, MainMenuUI, Toast, SafeAreaPanel
+│   ├── Services/                   # Ads, Reward, IAP, Analytics, RemoteConfig, FirebaseInit
+│   └── Save/                       # SaveManager (şifreli), SaveCrypto
+└── Resources/
+    └── Levels/                     # Elle tasarlanmış seviyeler (Level_0..2.json)
+Tests/
+├── LogicTests/                     # dotnet run: level, çözücü, şifreleme, çeviri testleri
+├── CompileCheck/                   # dotnet build: tüm scriptler Unity 2021.3 API'sine karşı
+└── EditorCompileCheck/             # dotnet build: editör scriptleri dahil
 ```
 
 ---
@@ -162,45 +131,26 @@ Assets/
 
 ### AdMob Kurulumu
 
-1. **AdMob hesabı oluştur**: [AdMob Console](https://apps.admob.com/)
-
-2. **Uygulama ve Ad Unit'leri oluştur:**
-   - Interstitial Ad Unit
-   - Rewarded Ad Unit
-   - Banner Ad Unit
-
-3. **Ad Unit ID'leri kopyala ve `AdsManager.cs`'e yapıştır:**
-
-```csharp
-// AdsManager.cs içinde bu ID'leri değiştir:
-public string AppId = "ca-app-pub-XXXXXX~YYYYYY";
-public string InterstitialAdUnitId = "ca-app-pub-XXXXXX/YYYYYY";
-public string RewardedAdUnitId = "ca-app-pub-XXXXXX/YYYYYY";
-public string BannerAdUnitId = "ca-app-pub-XXXXXX/YYYYYY";
-```
+1. [AdMob Console](https://apps.admob.com/)'da uygulama ve 3 reklam birimi oluştur (Interstitial, Rewarded, Banner)
+2. Google Mobile Ads Unity eklentisini içe aktar, `Assets > Google Mobile Ads > Settings`'e App ID'leri gir
+3. **Water Sort > SDK Tanımlarını Güncelle** çalıştır
+4. `AdsManager.cs` içindeki varsayılan reklam birimi ID'lerini kendi ID'lerinle değiştir (Android ve iOS ayrı alanlar)
 
 ### Test Reklamları
 
-Geliştirme sırasında **test reklam ID'leri** kullanın (yukarıdaki kod zaten test ID'leri içeriyor).
-
-**ÖNEMLİ:** Canlı yayına çıkmadan önce gerçek Ad Unit ID'lerinizi kullanın!
+Koddaki varsayılan ID'ler Google'ın **test** ID'leridir. Yayından önce kendi ID'lerinle değiştir.
 
 ### Reklam Stratejisi
 
-**Interstitial (Geçiş Reklamları):**
-- Varsayılan: Her 2 seviyede bir
-- Remote Config ile ayarlanabilir: `interstitial_frequency`
-- Minimum 30 saniye aralık
+**Interstitial:** Her 2 seviyede bir, en az 30 sn arayla (`interstitial_frequency`, `min_time_between_interstitials`)
 
-**Rewarded (Ödüllü Reklamlar):**
-- Undo hakkı: 3 hamle/reklam
-- Extra tüp: 1 tüp/reklam
-- Seviye atlama: Direkt geçiş
-- Günlük ödül: 50 coin/reklam
+**Rewarded:**
+- Geri alma: +3 hak
+- Ekstra tüp: +1 boş tüp
+- İpucu: bir sonraki doğru hamle (çözüm yoksa reklam gösterilmez)
+- Günlük ödül: +50 coin
 
-**Banner:**
-- Ekranın altında sürekli gösteriliyor
-- Settings'de kapatma opsiyonu (TODO)
+**Banner:** Ekranın altında; "Reklamları Kaldır" satın alınınca kalkar.
 
 ---
 
@@ -230,13 +180,15 @@ Level 20-39:  5 renk, 7-8 tüp
   "ColorCount": 2,
   "TubeCapacity": 4,
   "TubeConfigurations": [
-    [1, 2, 1, 2],
-    [2, 1, 2, 1],
-    [],
-    []
+    { "Colors": [1, 2, 1, 2] },
+    { "Colors": [2, 1, 2, 1] },
+    { "Colors": [] },
+    { "Colors": [] }
   ]
 }
 ```
+
+Her tüp alttan üste renk listesidir. Her renk tam `TubeCapacity` kez geçmelidir; geçersiz dosyalar yerine prosedürel seviye üretilir.
 
 **Renk Kodları:**
 - 0: None (Boş)
@@ -259,6 +211,7 @@ Level 20-39:  5 renk, 7-8 tüp
 2. JSON formatında level verisini yaz
 3. Oyun otomatik olarak bu seviyeyi yükleyecek
 4. Eğer JSON dosyası yoksa prosedürel üretim devreye girer
+5. `dotnet run --project Tests/LogicTests` ile seviyenin çözülebilir olduğunu doğrula
 
 ---
 
@@ -308,31 +261,27 @@ Group B: interstitial_frequency = 3
 
 ### Unity Editor'de Test
 
-1. `Bootstrap` sahnesini aç
-2. Play butonuna bas
-3. Konsol loglarına dikkat et (reklam mock mesajları göreceksin)
+1. **Water Sort > Oyunu Başlat**
+2. Reklamlar test modunda: ekranda "Test reklamı oynatılıyor..." mesajı, konsolda `[MOCK]` logları
 
-### Android'de Test
+### Unity Olmadan Test (.NET 8 SDK)
 
 ```bash
-# Build settings
-File > Build Settings
-Platform: Android
-Switch Platform
-
-# Build APK
-Build (veya Build and Run)
+dotnet run --project Tests/LogicTests                 # level, çözücü, şifreleme, çeviri testleri
+dotnet build Tests/CompileCheck                       # tüm scriptler Unity 2021.3 API'sine karşı
+dotnet build Tests/CompileCheck -p:WithSdks=true      # AdMob/Firebase/IAP kod yolları dahil
+dotnet build Tests/EditorCompileCheck                 # editör scriptleri dahil
 ```
 
 ### Test Checklist
 
-- [ ] Oyun başlıyor mu?
-- [ ] Tüplere tıklama çalışıyor mu?
-- [ ] Sıvı transfer animasyonu oynanıyor mu?
-- [ ] Level tamamlanınca popup geliyor mu?
-- [ ] Reklam gösterim logları görünüyor mu?
-- [ ] Save/Load çalışıyor mu?
-- [ ] Undo butonu çalışıyor mu?
+- [ ] Bootstrap'tan ana menü açılıyor mu?
+- [ ] Tüp seçme ve dökme çalışıyor mu? Geçersiz hamlede tüp sallanıyor mu?
+- [ ] Level bitince popup geliyor, sonraki level oynanabiliyor mu?
+- [ ] Geri al, yeniden başla, ipucu, ekstra tüp çalışıyor mu?
+- [ ] Dil değiştirince tüm yazılar değişiyor mu?
+- [ ] Oyunu kapatıp açınca ilerleme ve coinler duruyor mu?
+- [ ] Çentikli (notch) telefonda UI kesilmiyor mu?
 
 ---
 
@@ -379,44 +328,24 @@ Build (veya Build and Run)
 
 ---
 
-## 📝 TODO / Geliştirme Planı
+## 📝 Yayın Öncesi Yapılacaklar
 
-### Kritik (Oyun Yayınlanmadan Önce)
+Kod tarafı hazır. Kalanlar hesap, içerik ve test işleri:
 
-- [ ] **DOTween paketi import et** (animasyonlar için)
-- [ ] **AdMob SDK import et** ve reklam kodlarının yorumlarını kaldır
-- [ ] **Gerçek AdMob Unit ID'lerini ekle**
-- [ ] **Prefab'ları oluştur** (Tube, LiquidSegment, UI popups)
-- [ ] **Sahneleri oluştur** (Bootstrap, MainMenu, Game)
-- [ ] **Görselleri ekle** (tüp sprite, background, button icons)
-- [ ] **Ses efektleri ekle** (pour, complete, button click)
-- [ ] **Arka plan müziği ekle**
-- [ ] **Uygulama ikonu tasarla**
-- [ ] **Test cihazda çalıştır**
+- [ ] Unity'de **Water Sort > Projeyi Kur** çalıştır ve gerçek cihazda test et
+- [ ] AdMob hesabı + gerçek reklam ID'leri
+- [ ] (Opsiyonel) Firebase projesi ve yapılandırma dosyaları
+- [ ] (Opsiyonel) Unity IAP + mağazada "Reklamları Kaldır" ürünü
+- [ ] Ses efektleri ve müzik (`InputManager` ve `GameManager` üzerindeki AudioClip alanları)
+- [ ] Uygulama ikonu, mağaza görselleri, şirket adı ve paket adı (`com.yourcompany.watersort`)
+- [ ] Gizlilik politikası (reklam ve analitik için mağazalar zorunlu tutar)
 
-### Orta Öncelik
+### Sonraki Fikirler
 
-- [ ] **Firebase SDK import et** (Analytics + Remote Config)
-- [ ] **Firebase Analytics kodlarının yorumlarını kaldır**
-- [ ] **Remote Config aktif et**
-- [ ] **IAP sistemi tamamla** (No Ads satın alma)
-- [ ] **Level Select ekranı ekle**
-- [ ] **Settings popup tasarımı yap**
-- [ ] **Hint sistemi implement et**
-- [ ] **Particle efektleri ekle** (level complete confetti)
-- [ ] **Haptic feedback test et**
-
-### Düşük Öncelik / Nice-to-Have
-
-- [ ] Cloud save (Firebase/PlayFab)
-- [ ] Leaderboard
-- [ ] Daily challenges
-- [ ] Tema sistemi (farklı renk paletleri)
-- [ ] Ek tüp şekilleri
-- [ ] Power-up'lar (mix renkleri, freeze time vb.)
-- [ ] Social share (level completion screenshot)
-- [ ] Rate us popup
-- [ ] Birden fazla dil desteği
+- [ ] Level bitince konfeti efekti
+- [ ] Cloud save
+- [ ] Günlük görevler, tema sistemi
+- [ ] "Bizi değerlendir" penceresi
 
 ---
 

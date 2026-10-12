@@ -192,34 +192,14 @@ FPS: 59.8 | Tier: High | Mem: 256MB (12.5%)
    bool valid = SecurityManager.Instance.ValidateDeviceFingerprint();
    ```
 
-#### SaveManagerOptimized
+#### SaveManager (şifreli kayıt)
 
-**Konum:** `Assets/Scripts/Save/SaveManagerOptimized.cs`
+**Konum:** `Assets/Scripts/Save/SaveManager.cs`, şifreleme `Assets/Scripts/Save/SaveCrypto.cs`
 
-Production build'de `SaveManager.cs` yerine bunu kullan:
-
-- **Encrypted save/load**
-- **Memory obfuscation** (runtime value'lar şifrelenir)
-- **Automatic cheat detection**
-- **Value change validation**
-
-```csharp
-// Runtime'da değerler obfuscate edilir
-int GetCoins()
-{
-    // Memory'de şifreli tutulan değeri kontrol et
-    int deobfuscated = SecurityManager.Instance.DeobfuscateInt(_obfuscatedCoins);
-
-    // Memory manipulation var mı?
-    if (SecurityManager.Instance.DetectMemoryManipulation(_playerData.Coins, deobfuscated))
-    {
-        // Cheat detected! Reload from secure storage
-        LoadGame();
-    }
-
-    return _playerData.Coins;
-}
-```
+- Tüm kayıt tek bir JSON kaydı olarak AES-256 ile şifrelenir (her kayıtta rastgele IV)
+- Bütünlük kontrolü (tuzlu SHA-256): elle değiştirilen kayıt reddedilir
+- Eski sürümlerin düz PlayerPrefs kayıtları ilk açılışta otomatik taşınır
+- Yayından önce `SecurityManager` içindeki `ENCRYPTION_KEY` ve `HASH_SALT` değerlerini kendine özel değerlerle değiştir
 
 ---
 
@@ -417,7 +397,7 @@ if (PerformanceManager.Instance.AverageFPS < 30f)
 
 ✅ **YAPILMASI GEREKENLER:**
 ```csharp
-// Production build'de SaveManagerOptimized kullan
+// SaveManager kayıtları zaten şifreli tutar
 // Tüm önemli değerler encrypted kaydet
 SecurityManager.Instance.SecureSaveInt("Coins", coins);
 
@@ -532,7 +512,7 @@ Oyun içinde grade sistemi:
 Build almadan önce kontrol et:
 
 - [ ] ObjectPoolManager tüm prefab'lar için kuruldu
-- [ ] SaveManagerOptimized production'da kullanılıyor
+- [ ] SecurityManager ENCRYPTION_KEY / HASH_SALT değiştirildi
 - [ ] SecurityManager encryption enabled
 - [ ] BuildOptimizer ile optimize edildi
 - [ ] IL2CPP enabled
