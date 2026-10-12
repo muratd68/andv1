@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Compiles every runtime script in Assets/Scripts against the Unity 2021.3
        reference assemblies (NuGet), to catch compile errors without the Unity Editor.
-       DOTween and TextMeshPro are third-party packages not on NuGet; ThirdPartyStubs.cs
-       declares the few members the game uses.
+       TextMeshPro is not on NuGet; ThirdPartyStubs.cs declares the members the game uses.
        Usage: dotnet build (from this folder) -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
