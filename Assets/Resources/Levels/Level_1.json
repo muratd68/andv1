@@ -4,10 +4,10 @@
   "ColorCount": 3,
   "TubeCapacity": 4,
   "TubeConfigurations": [
-    [1, 2, 3, 1],
-    [3, 1, 2, 3],
-    [2, 3, 1, 2],
-    [],
-    []
+    { "Colors": [1, 2, 3, 1] },
+    { "Colors": [3, 1, 2, 3] },
+    { "Colors": [2, 3, 1, 2] },
+    { "Colors": [] },
+    { "Colors": [] }
   ]
 }
