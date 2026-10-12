@@ -141,17 +141,12 @@ namespace WaterSort.Core
                 UndoCountText.text = $"Undo: {remaining}";
             }
 
-            // Update button interactability
+            // Show that undo requires an ad once free undos are used up (and switch back after a refill)
             if (UndoButton != null)
             {
-                // Show different icon or text when undo requires ad
-                if (remaining <= 0)
-                {
-                    // Change button to show ad icon
-                    var buttonText = UndoButton.GetComponentInChildren<TextMeshProUGUI>();
-                    if (buttonText != null)
-                        buttonText.text = "Undo (Ad)";
-                }
+                var buttonText = UndoButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (buttonText != null)
+                    buttonText.text = remaining <= 0 ? "Undo (Ad)" : "Undo";
             }
         }
 
@@ -210,10 +205,7 @@ namespace WaterSort.Core
 
         private void OnMusicToggled(bool value)
         {
-            GameManager.Instance.IsMusicEnabled = value;
-            GameManager.Instance.SaveSettings();
-
-            // TODO: Control background music
+            GameManager.Instance.SetMusicEnabled(value);
         }
 
         private void OnHapticToggled(bool value)

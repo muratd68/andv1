@@ -17,6 +17,9 @@ namespace WaterSort.Core
         [Header("Liquid Stack")]
         private List<LiquidSegment> _liquidStack = new List<LiquidSegment>();
 
+        // Segments playing their removal animation, despawned when it finishes
+        private readonly List<GameObject> _removingSegments = new List<GameObject>();
+
         [Header("Visual References")]
         public Transform LiquidContainer;
         public SpriteRenderer TubeRenderer;
@@ -35,9 +38,10 @@ namespace WaterSort.Core
             _originalScale = transform.localScale;
         }
 
-        public void Initialize(int index, List<LiquidColor> initialColors)
+        public void Initialize(int index, List<LiquidColor> initialColors, int capacity)
         {
             TubeIndex = index;
+            MaxCapacity = capacity;
 
             // Clear any existing liquid
             ClearLiquid();
@@ -49,17 +53,57 @@ namespace WaterSort.Core
             }
         }
 
-        private void ClearLiquid()
+        /// <summary>
+        /// Returns all liquid segments to the pool. Must be called before the tube
+        /// is destroyed, otherwise the pooled segments are destroyed with it.
+        /// </summary>
+        public void ClearLiquid()
         {
             foreach (var segment in _liquidStack)
             {
                 if (segment.VisualObject != null)
                 {
+                    segment.VisualObject.transform.DOKill();
                     // OPTIMIZED: Use Object Pooling instead of Destroy
-                    ObjectPoolManager.Instance?.Despawn(segment.VisualObject);
+                    ReleaseSegment(segment.VisualObject);
                 }
             }
             _liquidStack.Clear();
+
+            foreach (var obj in _removingSegments)
+            {
+                if (obj != null)
+                {
+                    obj.transform.DOKill();
+                    ReleaseSegment(obj);
+                }
+            }
+            _removingSegments.Clear();
+        }
+
+        private void ReleaseSegment(GameObject obj)
+        {
+            if (ObjectPoolManager.Instance != null)
+                ObjectPoolManager.Instance.Despawn(obj);
+            else
+                Destroy(obj);
+        }
+
+        private void OnDestroy()
+        {
+            // Only stop tweens here: re-parenting children while the scene unloads is not allowed.
+            // LevelManager calls ClearLiquid() before destroying tubes to return segments to the pool.
+            transform.DOKill();
+            foreach (var segment in _liquidStack)
+            {
+                if (segment.VisualObject != null)
+                    segment.VisualObject.transform.DOKill();
+            }
+            foreach (var obj in _removingSegments)
+            {
+                if (obj != null)
+                    obj.transform.DOKill();
+            }
         }
 
         public void AddLiquid(LiquidColor color, int amount)
@@ -116,6 +160,7 @@ namespace WaterSort.Core
 
             // Position based on index
             float yPos = index * SegmentHeight;
+            segmentObj.transform.DOKill();
             segmentObj.transform.localPosition = new Vector3(0, yPos, 0);
             segmentObj.transform.localScale = Vector3.one; // Reset scale
 
@@ -140,11 +185,14 @@ namespace WaterSort.Core
                 if (segment.VisualObject != null)
                 {
                     GameObject obj = segment.VisualObject;
+                    _removingSegments.Add(obj);
 
                     // OPTIMIZED: Animate then return to pool
-                    segment.VisualObject.transform.DOScale(0, 0.2f).OnComplete(() =>
+                    obj.transform.DOKill();
+                    obj.transform.DOScale(0, 0.2f).OnComplete(() =>
                     {
-                        ObjectPoolManager.Instance?.Despawn(obj);
+                        _removingSegments.Remove(obj);
+                        ReleaseSegment(obj);
                     });
                 }
 
@@ -212,6 +260,7 @@ namespace WaterSort.Core
             _isSelected = true;
 
             // Scale up animation
+            transform.DOKill(true);
             transform.DOScale(_originalScale * SelectionScale, 0.2f)
                 .SetEase(Ease.OutBack);
 
@@ -224,6 +273,7 @@ namespace WaterSort.Core
             _isSelected = false;
 
             // Scale back animation
+            transform.DOKill(true);
             transform.DOScale(_originalScale, 0.2f)
                 .SetEase(Ease.InBack);
 
@@ -234,6 +284,7 @@ namespace WaterSort.Core
         public void PlayInvalidMoveAnimation()
         {
             // Shake animation to indicate invalid move
+            transform.DOKill(true);
             transform.DOShakePosition(0.3f, 0.1f, 20, 90, false, true);
         }
 

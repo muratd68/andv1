@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Globalization;
 
 namespace WaterSort.Core
 {
@@ -132,6 +133,12 @@ namespace WaterSort.Core
             if (_playerData == null) return;
 
             _playerData.CurrentLevel = level;
+
+            if (level > _playerData.HighestLevel)
+            {
+                _playerData.HighestLevel = level;
+            }
+
             SaveGame();
         }
 
@@ -247,7 +254,8 @@ namespace WaterSort.Core
 
         private string GetStringFromDate(DateTime date)
         {
-            return date.ToString("yyyy-MM-dd HH:mm:ss");
+            // Round-trip format, independent of the device language (e.g. Turkish locale)
+            return date.ToString("o", CultureInfo.InvariantCulture);
         }
 
         private DateTime GetDateFromString(string dateString)
@@ -257,7 +265,7 @@ namespace WaterSort.Core
 
             try
             {
-                return DateTime.Parse(dateString);
+                return DateTime.Parse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             }
             catch
             {

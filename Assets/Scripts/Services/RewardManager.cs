@@ -40,6 +40,30 @@ namespace WaterSort.Core
             DontDestroyOnLoad(gameObject);
         }
 
+        #region Prompt Helpers
+
+        /// <summary>
+        /// Asks for confirmation with the in-game popup. Scenes without a UIManager
+        /// (e.g. the main menu) go straight to the ad.
+        /// </summary>
+        private void ShowPrompt(string title, string message, Action onWatchAd)
+        {
+            if (UIManager.Instance != null)
+                UIManager.Instance.ShowRewardedAdPrompt(title, message, onWatchAd);
+            else
+                onWatchAd?.Invoke();
+        }
+
+        private void ShowMessage(string message)
+        {
+            if (UIManager.Instance != null)
+                UIManager.Instance.ShowMessage(message);
+            else
+                Debug.Log(message);
+        }
+
+        #endregion
+
         #region Undo Moves Reward
 
         /// <summary>
@@ -47,7 +71,7 @@ namespace WaterSort.Core
         /// </summary>
         public void ShowRewardedAdForUndo()
         {
-            UIManager.Instance.ShowRewardedAdPrompt(
+            ShowPrompt(
                 "Geri Al Hakkı",
                 $"{UndoMovesPerAd} geri alma hakkı kazanmak için reklam izle",
                 () =>
@@ -58,7 +82,7 @@ namespace WaterSort.Core
                         // Reward earned
                         LevelManager.Instance.AddUndoMoves(UndoMovesPerAd);
 
-                        UIManager.Instance.ShowMessage($"+{UndoMovesPerAd} Geri Alma Hakkı!");
+                        ShowMessage($"+{UndoMovesPerAd} Geri Alma Hakkı!");
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_undo", new System.Collections.Generic.Dictionary<string, object>
                         {
@@ -78,7 +102,7 @@ namespace WaterSort.Core
         /// </summary>
         public void ShowRewardedAdForExtraTube()
         {
-            UIManager.Instance.ShowRewardedAdPrompt(
+            ShowPrompt(
                 "Ekstra Tüp",
                 "Geçici bir boş tüp eklemek için reklam izle",
                 () =>
@@ -89,7 +113,7 @@ namespace WaterSort.Core
                         // Reward earned
                         LevelManager.Instance.AddExtraTube();
 
-                        UIManager.Instance.ShowMessage("Ekstra tüp eklendi!");
+                        ShowMessage("Ekstra tüp eklendi!");
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_extra_tube", null);
                     });
@@ -106,7 +130,7 @@ namespace WaterSort.Core
         /// </summary>
         public void ShowRewardedAdForSkip(Action onSkipped = null)
         {
-            UIManager.Instance.ShowRewardedAdPrompt(
+            ShowPrompt(
                 "Seviyeyi Atla",
                 "Bu seviyeyi geçmek için reklam izle",
                 () =>
@@ -115,7 +139,7 @@ namespace WaterSort.Core
                     AdsManager.Instance.ShowRewardedAd(() =>
                     {
                         // Reward earned
-                        UIManager.Instance.ShowMessage("Seviye atlandı!");
+                        ShowMessage("Seviye atlandı!");
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_skip", new System.Collections.Generic.Dictionary<string, object>
                         {
@@ -137,7 +161,7 @@ namespace WaterSort.Core
         /// </summary>
         public void ShowRewardedAdForHint()
         {
-            UIManager.Instance.ShowRewardedAdPrompt(
+            ShowPrompt(
                 "İpucu",
                 "Bir sonraki hamle için ipucu almak için reklam izle",
                 () =>
@@ -157,7 +181,7 @@ namespace WaterSort.Core
         private void ShowHint()
         {
             // TODO: Implement hint logic - highlight a valid move
-            UIManager.Instance.ShowMessage("İpucu: Kırmızı tüpten boş tüpe dök!");
+            ShowMessage("İpucu: Kırmızı tüpten boş tüpe dök!");
         }
 
         #endregion
@@ -167,9 +191,9 @@ namespace WaterSort.Core
         /// <summary>
         /// Show rewarded ad for daily bonus coins
         /// </summary>
-        public void ShowDailyRewardAd()
+        public void ShowDailyRewardAd(Action onClaimed = null)
         {
-            UIManager.Instance.ShowRewardedAdPrompt(
+            ShowPrompt(
                 "Günlük Ödül",
                 $"Günlük {CoinsPerDailyReward} coin kazanmak için reklam izle",
                 () =>
@@ -181,7 +205,8 @@ namespace WaterSort.Core
                         SaveManager.Instance.AddCoins(CoinsPerDailyReward);
                         SaveManager.Instance.SetLastDailyRewardDate(System.DateTime.Now);
 
-                        UIManager.Instance.ShowMessage($"+{CoinsPerDailyReward} Coin!");
+                        ShowMessage($"+{CoinsPerDailyReward} Coin!");
+                        onClaimed?.Invoke();
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_daily", new System.Collections.Generic.Dictionary<string, object>
                         {

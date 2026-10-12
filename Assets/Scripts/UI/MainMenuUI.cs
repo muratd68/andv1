@@ -85,7 +85,8 @@ namespace WaterSort.Core
 
         private void OnPlayClicked()
         {
-            // Start from level 0
+            // New game: start from level 0 (highest level reached is kept for level select)
+            SaveManager.Instance.SetCurrentLevel(0);
             GameManager.Instance.ChangeState(GameState.Playing);
         }
 
@@ -117,8 +118,12 @@ namespace WaterSort.Core
         {
             if (RewardManager.Instance.CanClaimDailyReward())
             {
-                RewardManager.Instance.ShowDailyRewardAd();
-                CheckDailyReward(); // Update indicator
+                RewardManager.Instance.ShowDailyRewardAd(() =>
+                {
+                    // Update indicator and coins once the reward is granted
+                    CheckDailyReward();
+                    UpdateUI();
+                });
             }
             else
             {

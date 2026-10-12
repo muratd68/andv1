@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace WaterSort.Core
 {
@@ -25,7 +26,13 @@ namespace WaterSort.Core
 
         [Header("Settings")]
         public LayerMask TubeLayer;
-        public float MaxTapDistance = 0.5f;
+        [Tooltip("Max finger movement in pixels for a touch to still count as a tap")]
+        public float MaxTapDistance = 30f;
+
+        [Header("Sounds")]
+        public AudioClip SelectSound;
+        public AudioClip PourSound;
+        public AudioClip ErrorSound;
 
         private Vector3 _touchStartPos;
         private bool _isDragging = false;
@@ -39,6 +46,10 @@ namespace WaterSort.Core
         {
             // Only handle input when playing
             if (GameManager.Instance.CurrentState != GameState.Playing)
+                return;
+
+            // Ignore taps while pour/undo animations are running
+            if (LevelManager.Instance != null && LevelManager.Instance.IsBusy)
                 return;
 
             HandleInput();
@@ -70,10 +81,9 @@ namespace WaterSort.Core
             }
             else if (Input.GetMouseButtonUp(0))
             {
-                if (!_isDragging)
+                if (!_isDragging && !IsPointerOverUI(-1))
                 {
-                    Vector3 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                    HandleTap(worldPos);
+                    HandleTap(Input.mousePosition);
                 }
                 _isDragging = false;
             }
@@ -101,10 +111,9 @@ namespace WaterSort.Core
                         break;
 
                     case TouchPhase.Ended:
-                        if (!_isDragging)
+                        if (!_isDragging && !IsPointerOverUI(touch.fingerId))
                         {
-                            Vector3 worldPos = Camera.main.ScreenToWorldPoint(touch.position);
-                            HandleTap(worldPos);
+                            HandleTap(touch.position);
                         }
                         _isDragging = false;
                         break;
@@ -112,14 +121,30 @@ namespace WaterSort.Core
             }
         }
 
-        private void HandleTap(Vector3 worldPosition)
+        /// <summary>
+        /// Taps on buttons/popups must not also select tubes behind them
+        /// </summary>
+        private bool IsPointerOverUI(int pointerId)
         {
+            if (EventSystem.current == null) return false;
+            return pointerId < 0
+                ? EventSystem.current.IsPointerOverGameObject()
+                : EventSystem.current.IsPointerOverGameObject(pointerId);
+        }
+
+        private void HandleTap(Vector3 screenPosition)
+        {
+            Camera cam = Camera.main;
+            if (cam == null) return;
+
+            Vector3 worldPosition = cam.ScreenToWorldPoint(screenPosition);
+
             // Raycast to detect tube
             RaycastHit2D hit = Physics2D.Raycast(worldPosition, Vector2.zero, Mathf.Infinity, TubeLayer);
 
             if (hit.collider != null)
             {
-                TubeController tappedTube = hit.collider.GetComponent<TubeController>();
+                TubeController tappedTube = hit.collider.GetComponentInParent<TubeController>();
                 if (tappedTube != null)
                 {
                     OnTubeTapped(tappedTube);
@@ -146,7 +171,7 @@ namespace WaterSort.Core
                     _selectedTube = tube;
                     _selectedTube.Select();
 
-                    GameManager.Instance.PlaySound(null); // TODO: Add select sound
+                    GameManager.Instance.PlaySound(SelectSound);
                     GameManager.Instance.TriggerHaptic();
                 }
             }
@@ -166,14 +191,14 @@ namespace WaterSort.Core
 
                     if (success)
                     {
-                        GameManager.Instance.PlaySound(null); // TODO: Add pour sound
+                        GameManager.Instance.PlaySound(PourSound);
                         GameManager.Instance.TriggerHaptic();
                     }
                     else
                     {
                         // Invalid move - play error feedback
                         tube.PlayInvalidMoveAnimation();
-                        GameManager.Instance.PlaySound(null); // TODO: Add error sound
+                        GameManager.Instance.PlaySound(ErrorSound);
                     }
 
                     // Deselect after attempt
@@ -181,6 +206,14 @@ namespace WaterSort.Core
                     _selectedTube = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Forget the selection without animating (the tube is about to be destroyed)
+        /// </summary>
+        public void ResetSelection()
+        {
+            _selectedTube = null;
         }
 
         public void DeselectAll()
