@@ -75,3 +75,4 @@ Thumbs.db
 # .NET logic tests
 Tests/**/bin/
 Tests/**/obj/
+!Tests/**/*.csproj
