@@ -358,6 +358,34 @@ namespace WaterSort.Core
         }
 
         /// <summary>
+        /// Finds the next move towards a solution from the current state and highlights it.
+        /// Returns false if the current state cannot be solved (player should undo or restart).
+        /// </summary>
+        public bool HasSolution()
+        {
+            if (CurrentLevel == null) return false;
+            return LevelSolver.Solve(GetSolverState(), CurrentLevel.TubeCapacity, 100000) != null;
+        }
+
+        public bool ShowHint()
+        {
+            if (CurrentLevel == null) return false;
+
+            var hint = LevelSolver.GetHint(GetSolverState(), CurrentLevel.TubeCapacity, 100000);
+            if (hint == null)
+                return false;
+
+            InputManager.Instance?.DeselectAll();
+
+            LevelSolver.Move move = hint.Value;
+            _tubes[move.From].PlayHintAnimation();
+            _tubes[move.To].PlayHintAnimation(0.4f);
+
+            UIManager.Instance?.ShowMessage($"İpucu: {move.From + 1}. tüpten {move.To + 1}. tüpe dök", 3f);
+            return true;
+        }
+
+        /// <summary>
         /// Current tube contents in LevelSolver format
         /// </summary>
         public List<List<int>> GetSolverState()

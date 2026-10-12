@@ -281,6 +281,15 @@ namespace WaterSort.Core
             // TubeRenderer.material.SetFloat("_GlowIntensity", 0f);
         }
 
+        /// <summary>
+        /// Pulse used by the hint system to point at a tube
+        /// </summary>
+        public void PlayHintAnimation(float delay = 0f)
+        {
+            transform.DOKill(true);
+            transform.DOPunchScale(Vector3.one * 0.2f, 0.6f, 4, 0.5f).SetDelay(delay);
+        }
+
         public void PlayInvalidMoveAnimation()
         {
             // Shake animation to indicate invalid move

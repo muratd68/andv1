@@ -161,6 +161,13 @@ namespace WaterSort.Core
         /// </summary>
         public void ShowRewardedAdForHint()
         {
+            // Don't make the player watch an ad for a hint that cannot exist
+            if (LevelManager.Instance != null && !LevelManager.Instance.HasSolution())
+            {
+                ShowMessage("Bu durumdan çözüm yok - geri al veya yeniden başla");
+                return;
+            }
+
             ShowPrompt(
                 "İpucu",
                 "Bir sonraki hamle için ipucu almak için reklam izle",
@@ -169,7 +176,6 @@ namespace WaterSort.Core
                     // User accepted - show ad
                     AdsManager.Instance.ShowRewardedAd(() =>
                     {
-                        // TODO: Implement hint system
                         ShowHint();
 
                         AnalyticsManager.Instance.LogEvent("rewarded_ad_hint", null);
@@ -180,8 +186,12 @@ namespace WaterSort.Core
 
         private void ShowHint()
         {
-            // TODO: Implement hint logic - highlight a valid move
-            ShowMessage("İpucu: Kırmızı tüpten boş tüpe dök!");
+            if (LevelManager.Instance == null) return;
+
+            if (!LevelManager.Instance.ShowHint())
+            {
+                ShowMessage("Bu durumdan çözüm yok - geri al veya yeniden başla");
+            }
         }
 
         #endregion
