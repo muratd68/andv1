@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using DG.Tweening;
 
 namespace WaterSort.Core
 {
@@ -16,6 +15,9 @@ namespace WaterSort.Core
 
         [Header("Liquid Stack")]
         private List<LiquidSegment> _liquidStack = new List<LiquidSegment>();
+
+        // Segments playing their removal animation, despawned when it finishes
+        private readonly List<GameObject> _removingSegments = new List<GameObject>();
 
         [Header("Visual References")]
         public Transform LiquidContainer;
@@ -35,9 +37,10 @@ namespace WaterSort.Core
             _originalScale = transform.localScale;
         }
 
-        public void Initialize(int index, List<LiquidColor> initialColors)
+        public void Initialize(int index, List<LiquidColor> initialColors, int capacity)
         {
             TubeIndex = index;
+            MaxCapacity = capacity;
 
             // Clear any existing liquid
             ClearLiquid();
@@ -49,17 +52,57 @@ namespace WaterSort.Core
             }
         }
 
-        private void ClearLiquid()
+        /// <summary>
+        /// Returns all liquid segments to the pool. Must be called before the tube
+        /// is destroyed, otherwise the pooled segments are destroyed with it.
+        /// </summary>
+        public void ClearLiquid()
         {
             foreach (var segment in _liquidStack)
             {
                 if (segment.VisualObject != null)
                 {
+                    SimpleTween.Kill(segment.VisualObject.transform);
                     // OPTIMIZED: Use Object Pooling instead of Destroy
-                    ObjectPoolManager.Instance?.Despawn(segment.VisualObject);
+                    ReleaseSegment(segment.VisualObject);
                 }
             }
             _liquidStack.Clear();
+
+            foreach (var obj in _removingSegments)
+            {
+                if (obj != null)
+                {
+                    SimpleTween.Kill(obj.transform);
+                    ReleaseSegment(obj);
+                }
+            }
+            _removingSegments.Clear();
+        }
+
+        private void ReleaseSegment(GameObject obj)
+        {
+            if (ObjectPoolManager.Instance != null)
+                ObjectPoolManager.Instance.Despawn(obj);
+            else
+                Destroy(obj);
+        }
+
+        private void OnDestroy()
+        {
+            // Only stop tweens here: re-parenting children while the scene unloads is not allowed.
+            // LevelManager calls ClearLiquid() before destroying tubes to return segments to the pool.
+            SimpleTween.Kill(transform);
+            foreach (var segment in _liquidStack)
+            {
+                if (segment.VisualObject != null)
+                    SimpleTween.Kill(segment.VisualObject.transform);
+            }
+            foreach (var obj in _removingSegments)
+            {
+                if (obj != null)
+                    SimpleTween.Kill(obj.transform);
+            }
         }
 
         public void AddLiquid(LiquidColor color, int amount)
@@ -88,8 +131,7 @@ namespace WaterSort.Core
             Vector3 finalPos = segmentTransform.localPosition;
             segmentTransform.localPosition = finalPos + Vector3.up * 2f;
 
-            segmentTransform.DOLocalMove(finalPos, PourDuration)
-                .SetEase(Ease.OutBounce);
+            SimpleTween.LocalMove(segmentTransform, finalPos, PourDuration, TweenEase.OutBounce);
         }
 
         private GameObject CreateLiquidSegment(LiquidColor color, int index)
@@ -116,6 +158,7 @@ namespace WaterSort.Core
 
             // Position based on index
             float yPos = index * SegmentHeight;
+            SimpleTween.Kill(segmentObj.transform);
             segmentObj.transform.localPosition = new Vector3(0, yPos, 0);
             segmentObj.transform.localScale = Vector3.one; // Reset scale
 
@@ -140,11 +183,14 @@ namespace WaterSort.Core
                 if (segment.VisualObject != null)
                 {
                     GameObject obj = segment.VisualObject;
+                    _removingSegments.Add(obj);
 
                     // OPTIMIZED: Animate then return to pool
-                    segment.VisualObject.transform.DOScale(0, 0.2f).OnComplete(() =>
+                    SimpleTween.Kill(obj.transform);
+                    SimpleTween.Scale(obj.transform, Vector3.zero, 0.2f).OnComplete(() =>
                     {
-                        ObjectPoolManager.Instance?.Despawn(obj);
+                        _removingSegments.Remove(obj);
+                        ReleaseSegment(obj);
                     });
                 }
 
@@ -212,8 +258,8 @@ namespace WaterSort.Core
             _isSelected = true;
 
             // Scale up animation
-            transform.DOScale(_originalScale * SelectionScale, 0.2f)
-                .SetEase(Ease.OutBack);
+            SimpleTween.Kill(transform, true);
+            SimpleTween.Scale(transform, _originalScale * SelectionScale, 0.2f, TweenEase.OutBack);
 
             // Glow effect (if you have a glow sprite)
             // TubeRenderer.material.SetFloat("_GlowIntensity", 1f);
@@ -224,17 +270,27 @@ namespace WaterSort.Core
             _isSelected = false;
 
             // Scale back animation
-            transform.DOScale(_originalScale, 0.2f)
-                .SetEase(Ease.InBack);
+            SimpleTween.Kill(transform, true);
+            SimpleTween.Scale(transform, _originalScale, 0.2f, TweenEase.InBack);
 
             // Remove glow
             // TubeRenderer.material.SetFloat("_GlowIntensity", 0f);
         }
 
+        /// <summary>
+        /// Pulse used by the hint system to point at a tube
+        /// </summary>
+        public void PlayHintAnimation(float delay = 0f)
+        {
+            SimpleTween.Kill(transform, true);
+            SimpleTween.PunchScale(transform, Vector3.one * 0.2f, 0.6f).SetDelay(delay);
+        }
+
         public void PlayInvalidMoveAnimation()
         {
             // Shake animation to indicate invalid move
-            transform.DOShakePosition(0.3f, 0.1f, 20, 90, false, true);
+            SimpleTween.Kill(transform, true);
+            SimpleTween.ShakePosition(transform, 0.3f, 0.1f);
         }
 
         private Color GetColorFromEnum(LiquidColor liquidColor)
@@ -268,22 +324,5 @@ namespace WaterSort.Core
     {
         public LiquidColor Color;
         public GameObject VisualObject;
-    }
-
-    public enum LiquidColor
-    {
-        None = 0,
-        Red = 1,
-        Blue = 2,
-        Green = 3,
-        Yellow = 4,
-        Purple = 5,
-        Orange = 6,
-        Pink = 7,
-        Cyan = 8,
-        Brown = 9,
-        Gray = 10,
-        Lime = 11,
-        Teal = 12
     }
 }

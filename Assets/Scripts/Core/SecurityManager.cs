@@ -67,8 +67,11 @@ namespace WaterSort.Core
 
         #region Data Encryption
 
+        private SaveCrypto _crypto;
+        private SaveCrypto Crypto => _crypto ?? (_crypto = new SaveCrypto(ENCRYPTION_KEY, HASH_SALT));
+
         /// <summary>
-        /// Encrypt string data using AES-256
+        /// Encrypt string data using AES-256 (random IV per value)
         /// </summary>
         public string Encrypt(string plainText)
         {
@@ -77,23 +80,7 @@ namespace WaterSort.Core
 
             try
             {
-                byte[] key = DeriveKeyFromPassword(ENCRYPTION_KEY);
-                byte[] iv = new byte[16]; // AES block size
-
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = key;
-                    aes.IV = iv;
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-
-                    byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
-                    byte[] encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-
-                    return Convert.ToBase64String(encryptedBytes);
-                }
+                return Crypto.Encrypt(plainText);
             }
             catch (Exception ex)
             {
@@ -112,38 +99,12 @@ namespace WaterSort.Core
 
             try
             {
-                byte[] key = DeriveKeyFromPassword(ENCRYPTION_KEY);
-                byte[] iv = new byte[16];
-
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = key;
-                    aes.IV = iv;
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-
-                    byte[] encryptedBytes = Convert.FromBase64String(encryptedText);
-                    byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-
-                    return Encoding.UTF8.GetString(decryptedBytes);
-                }
+                return Crypto.Decrypt(encryptedText);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Decryption failed: {ex.Message}");
                 return encryptedText;
-            }
-        }
-
-        private byte[] DeriveKeyFromPassword(string password)
-        {
-            byte[] salt = Encoding.UTF8.GetBytes(HASH_SALT);
-
-            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
-            {
-                return deriveBytes.GetBytes(32); // 256-bit key
             }
         }
 
@@ -156,19 +117,7 @@ namespace WaterSort.Core
         /// </summary>
         public string GenerateHash(string data)
         {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                string saltedData = data + HASH_SALT;
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(saltedData));
-
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-
-                return builder.ToString();
-            }
+            return Crypto.Hash(data);
         }
 
         /// <summary>

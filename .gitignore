@@ -71,3 +71,8 @@ crashlytics-build.properties
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# .NET logic tests
+Tests/**/bin/
+Tests/**/obj/
+!Tests/**/*.csproj

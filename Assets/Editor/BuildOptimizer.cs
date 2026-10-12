@@ -91,9 +91,6 @@ namespace WaterSort.Editor
             PlayerSettings.MTRendering = true;
             PlayerSettings.graphicsJobs = true;
 
-            // Lightmap encoding
-            PlayerSettings.lightmapEncodingQuality = LightmapEncodingQuality.Normal;
-
             Debug.Log("Android build optimized!");
             EditorUtility.DisplayDialog("Success", "Android build settings optimized for maximum performance!", "OK");
         }
@@ -174,7 +171,7 @@ namespace WaterSort.Editor
                     androidSettings.overridden = true;
                     androidSettings.maxTextureSize = 2048; // Max 2K textures
                     androidSettings.format = TextureImporterFormat.ETC2_RGBA8;
-                    androidSettings.compressionQuality = (int)TextureCompressionQuality.Normal;
+                    androidSettings.compressionQuality = (int)UnityEditor.TextureCompressionQuality.Normal;
                     importer.SetPlatformTextureSettings(androidSettings);
 
                     // iOS settings
@@ -182,7 +179,7 @@ namespace WaterSort.Editor
                     iosSettings.overridden = true;
                     iosSettings.maxTextureSize = 2048;
                     iosSettings.format = TextureImporterFormat.ASTC_6x6;
-                    iosSettings.compressionQuality = (int)TextureCompressionQuality.Normal;
+                    iosSettings.compressionQuality = (int)UnityEditor.TextureCompressionQuality.Normal;
                     importer.SetPlatformTextureSettings(iosSettings);
 
                     // Common settings

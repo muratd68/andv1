@@ -1,11 +1,14 @@
 using UnityEngine;
 using System;
+using System.Globalization;
 
 namespace WaterSort.Core
 {
     /// <summary>
-    /// Manages player progress, coins, and persistent data
-    /// Uses PlayerPrefs for simple storage (can be upgraded to JSON/Cloud save)
+    /// Manages player progress, coins, and persistent data.
+    /// The whole save is one JSON record, AES-encrypted with an integrity hash
+    /// (SecurityManager), stored in PlayerPrefs. Saves from older versions
+    /// (plain PlayerPrefs keys) are migrated on first load.
     /// </summary>
     public class SaveManager : MonoBehaviour
     {
@@ -24,7 +27,10 @@ namespace WaterSort.Core
             }
         }
 
-        // Save keys
+        // Current save format
+        private const string KEY_SAVE_DATA = "SaveData_v2";
+
+        // Legacy (plain text) keys - only read for migration
         private const string KEY_CURRENT_LEVEL = "CurrentLevel";
         private const string KEY_HIGHEST_LEVEL = "HighestLevel";
         private const string KEY_COINS = "Coins";
@@ -50,7 +56,81 @@ namespace WaterSort.Core
 
         public void LoadGame()
         {
-            _playerData = new PlayerData
+            if (PlayerPrefs.HasKey(KEY_SAVE_DATA))
+            {
+                _playerData = LoadSecure();
+            }
+            else if (PlayerPrefs.HasKey(KEY_CURRENT_LEVEL) || PlayerPrefs.HasKey(KEY_COINS))
+            {
+                _playerData = LoadLegacy();
+                SaveGame();
+                DeleteLegacyKeys();
+                Debug.Log("Migrated old save to the encrypted format");
+            }
+            else
+            {
+                _playerData = new PlayerData { LastDailyRewardDate = DateTime.MinValue };
+            }
+
+            Debug.Log($"Game loaded - Current Level: {_playerData.CurrentLevel}, Coins: {_playerData.Coins}");
+        }
+
+        public void SaveGame()
+        {
+            if (_playerData == null) return;
+
+            var record = new SaveRecord
+            {
+                CurrentLevel = _playerData.CurrentLevel,
+                HighestLevel = _playerData.HighestLevel,
+                Coins = _playerData.Coins,
+                TotalMoves = _playerData.TotalMoves,
+                TotalPlaytime = _playerData.TotalPlaytime,
+                LastDailyReward = GetStringFromDate(_playerData.LastDailyRewardDate),
+                NoAdsPurchased = _playerData.NoAdsPurchased
+            };
+
+            // Encrypts, stores an integrity hash and calls PlayerPrefs.Save()
+            SecurityManager.Instance.SecureSave(KEY_SAVE_DATA, JsonUtility.ToJson(record));
+        }
+
+        private PlayerData LoadSecure()
+        {
+            string json = SecurityManager.Instance.SecureLoad(KEY_SAVE_DATA, "");
+            SaveRecord record = null;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(json))
+                    record = JsonUtility.FromJson<SaveRecord>(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Save data could not be read: {ex.Message}");
+            }
+
+            if (record == null)
+            {
+                // Tampered or corrupt: start fresh rather than trusting the data
+                Debug.LogWarning("Save data invalid - starting a new save");
+                return new PlayerData { LastDailyRewardDate = DateTime.MinValue };
+            }
+
+            return new PlayerData
+            {
+                CurrentLevel = Mathf.Max(0, record.CurrentLevel),
+                HighestLevel = Mathf.Max(0, record.HighestLevel),
+                Coins = Mathf.Max(0, record.Coins),
+                TotalMoves = record.TotalMoves,
+                TotalPlaytime = record.TotalPlaytime,
+                LastDailyRewardDate = GetDateFromString(record.LastDailyReward),
+                NoAdsPurchased = record.NoAdsPurchased
+            };
+        }
+
+        private PlayerData LoadLegacy()
+        {
+            return new PlayerData
             {
                 CurrentLevel = PlayerPrefs.GetInt(KEY_CURRENT_LEVEL, 0),
                 HighestLevel = PlayerPrefs.GetInt(KEY_HIGHEST_LEVEL, 0),
@@ -60,25 +140,18 @@ namespace WaterSort.Core
                 LastDailyRewardDate = GetDateFromString(PlayerPrefs.GetString(KEY_LAST_DAILY_REWARD, "")),
                 NoAdsPurchased = PlayerPrefs.GetInt(KEY_NO_ADS_PURCHASED, 0) == 1
             };
-
-            Debug.Log($"Game loaded - Current Level: {_playerData.CurrentLevel}, Coins: {_playerData.Coins}");
         }
 
-        public void SaveGame()
+        private void DeleteLegacyKeys()
         {
-            if (_playerData == null) return;
-
-            PlayerPrefs.SetInt(KEY_CURRENT_LEVEL, _playerData.CurrentLevel);
-            PlayerPrefs.SetInt(KEY_HIGHEST_LEVEL, _playerData.HighestLevel);
-            PlayerPrefs.SetInt(KEY_COINS, _playerData.Coins);
-            PlayerPrefs.SetInt(KEY_TOTAL_MOVES, _playerData.TotalMoves);
-            PlayerPrefs.SetFloat(KEY_TOTAL_PLAYTIME, _playerData.TotalPlaytime);
-            PlayerPrefs.SetString(KEY_LAST_DAILY_REWARD, GetStringFromDate(_playerData.LastDailyRewardDate));
-            PlayerPrefs.SetInt(KEY_NO_ADS_PURCHASED, _playerData.NoAdsPurchased ? 1 : 0);
-
+            PlayerPrefs.DeleteKey(KEY_CURRENT_LEVEL);
+            PlayerPrefs.DeleteKey(KEY_HIGHEST_LEVEL);
+            PlayerPrefs.DeleteKey(KEY_COINS);
+            PlayerPrefs.DeleteKey(KEY_TOTAL_MOVES);
+            PlayerPrefs.DeleteKey(KEY_TOTAL_PLAYTIME);
+            PlayerPrefs.DeleteKey(KEY_LAST_DAILY_REWARD);
+            PlayerPrefs.DeleteKey(KEY_NO_ADS_PURCHASED);
             PlayerPrefs.Save();
-
-            Debug.Log("Game saved");
         }
 
         #region Level Progress
@@ -132,6 +205,12 @@ namespace WaterSort.Core
             if (_playerData == null) return;
 
             _playerData.CurrentLevel = level;
+
+            if (level > _playerData.HighestLevel)
+            {
+                _playerData.HighestLevel = level;
+            }
+
             SaveGame();
         }
 
@@ -215,8 +294,7 @@ namespace WaterSort.Core
             // Update ads manager
             if (purchased)
             {
-                AdsManager.Instance.EnableAds = false;
-                AdsManager.Instance.DestroyBannerAd();
+                AdsManager.Instance.RemoveAds();
             }
         }
 
@@ -247,7 +325,8 @@ namespace WaterSort.Core
 
         private string GetStringFromDate(DateTime date)
         {
-            return date.ToString("yyyy-MM-dd HH:mm:ss");
+            // Round-trip format, independent of the device language (e.g. Turkish locale)
+            return date.ToString("o", CultureInfo.InvariantCulture);
         }
 
         private DateTime GetDateFromString(string dateString)
@@ -257,7 +336,7 @@ namespace WaterSort.Core
 
             try
             {
-                return DateTime.Parse(dateString);
+                return DateTime.Parse(dateString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             }
             catch
             {
@@ -292,6 +371,21 @@ namespace WaterSort.Core
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Serialized form of PlayerData (JsonUtility cannot serialize DateTime)
+    /// </summary>
+    [System.Serializable]
+    public class SaveRecord
+    {
+        public int CurrentLevel;
+        public int HighestLevel;
+        public int Coins;
+        public int TotalMoves;
+        public float TotalPlaytime;
+        public string LastDailyReward;
+        public bool NoAdsPurchased;
     }
 
     [System.Serializable]

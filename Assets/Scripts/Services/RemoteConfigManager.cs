@@ -1,13 +1,17 @@
 using UnityEngine;
+using System;
 using System.Collections.Generic;
-// using Firebase.RemoteConfig; // Uncomment when Firebase is imported
+#if WATERSORT_FIREBASE
+using Firebase.Extensions;
+using Firebase.RemoteConfig;
+#endif
 
 namespace WaterSort.Core
 {
     /// <summary>
-    /// Remote Config for A/B testing and live tuning
-    /// Allows changing game parameters without app update
-    /// TODO: Import Firebase SDK and uncomment Firebase code
+    /// Remote Config for A/B testing and live tuning.
+    /// Allows changing game parameters without an app update. Uses the defaults below
+    /// until Firebase Remote Config is available (Firebase SDK + WATERSORT_FIREBASE define).
     /// </summary>
     public class RemoteConfigManager : MonoBehaviour
     {
@@ -61,6 +65,11 @@ namespace WaterSort.Core
         };
 
         private Dictionary<string, object> _currentConfig;
+
+        /// <summary>
+        /// Raised after fetched values are activated
+        /// </summary>
+        public event Action ConfigUpdated;
         private bool _isInitialized = false;
 
         private void Awake()
@@ -89,94 +98,63 @@ namespace WaterSort.Core
                 return;
             }
 
-            // TODO: Uncomment when Firebase is imported
-            /*
-            Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
+            FirebaseInit.WhenReady(ok =>
             {
-                var dependencyStatus = task.Result;
-                if (dependencyStatus == Firebase.DependencyStatus.Available)
-                {
+                if (ok)
                     InitializeFirebaseRemoteConfig();
-                }
                 else
-                {
-                    Debug.LogError($"Could not resolve Firebase dependencies: {dependencyStatus}");
-                }
+                    Debug.Log("Remote Config: Firebase not available - using defaults");
             });
-            */
 
             _isInitialized = true;
         }
 
         private void InitializeFirebaseRemoteConfig()
         {
-            // TODO: Uncomment when Firebase is imported
-            /*
+#if WATERSORT_FIREBASE
             var remoteConfig = FirebaseRemoteConfig.DefaultInstance;
-
-            // Set default values
-            var defaults = new Dictionary<string, object>();
-            foreach (var kvp in _defaults)
-            {
-                defaults[kvp.Key] = kvp.Value;
-            }
-            remoteConfig.SetDefaultsAsync(defaults);
-
-            // Fetch remote values
-            FetchRemoteConfig();
-            */
-
-            Debug.Log("[MOCK] Firebase Remote Config would be initialized here");
+            remoteConfig.SetDefaultsAsync(_defaults).ContinueWithOnMainThread(_ => FetchRemoteConfig());
+#endif
         }
 
         public void FetchRemoteConfig()
         {
-            // TODO: Uncomment when Firebase is imported
-            /*
+#if WATERSORT_FIREBASE
             var remoteConfig = FirebaseRemoteConfig.DefaultInstance;
-
-            // Set cache expiration
-            System.TimeSpan cacheExpiration = System.TimeSpan.FromHours(12);
-
-            remoteConfig.FetchAsync(cacheExpiration).ContinueWith(fetchTask =>
+            remoteConfig.FetchAsync(TimeSpan.FromHours(12)).ContinueWithOnMainThread(fetchTask =>
             {
-                if (fetchTask.IsCanceled)
+                if (fetchTask.IsCanceled || fetchTask.IsFaulted)
                 {
-                    Debug.Log("Remote Config fetch was cancelled");
-                    return;
-                }
-                if (fetchTask.IsFaulted)
-                {
-                    Debug.LogError("Remote Config fetch failed");
-                    return;
-                }
-
-                Debug.Log("Remote Config fetched successfully");
-
-                remoteConfig.ActivateAsync().ContinueWith(activateTask =>
-                {
-                    Debug.Log("Remote Config activated");
+                    Debug.LogWarning("Remote Config fetch failed - using cached/default values");
                     LoadConfigValues();
-                });
-            });
-            */
+                    return;
+                }
 
-            Debug.Log("[MOCK] Fetching remote config...");
-            LoadConfigValues();
+                remoteConfig.ActivateAsync().ContinueWithOnMainThread(_ => LoadConfigValues());
+            });
+#endif
         }
 
         private void LoadConfigValues()
         {
-            // TODO: Uncomment when Firebase is imported
-            /*
+#if WATERSORT_FIREBASE
             var remoteConfig = FirebaseRemoteConfig.DefaultInstance;
 
-            foreach (var key in _defaults.Keys)
+            foreach (var kvp in _defaults)
             {
-                var value = remoteConfig.GetValue(key);
-                _currentConfig[key] = ConvertValue(value);
+                ConfigValue value = remoteConfig.GetValue(kvp.Key);
+
+                // Keep the type of the default value
+                if (kvp.Value is int)
+                    _currentConfig[kvp.Key] = (int)value.LongValue;
+                else if (kvp.Value is float)
+                    _currentConfig[kvp.Key] = (float)value.DoubleValue;
+                else if (kvp.Value is bool)
+                    _currentConfig[kvp.Key] = value.BooleanValue;
+                else
+                    _currentConfig[kvp.Key] = value.StringValue;
             }
-            */
+#endif
 
             if (DebugMode)
             {
@@ -186,6 +164,8 @@ namespace WaterSort.Core
                     Debug.Log($"  {kvp.Key} = {kvp.Value}");
                 }
             }
+
+            ConfigUpdated?.Invoke();
         }
 
         #region Get Config Values

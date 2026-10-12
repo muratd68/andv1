@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs the Unity-independent gameplay logic (level data, solver, generator)
+       outside Unity. UnityStubs.cs provides the few UnityEngine APIs they touch.
+       Usage: dotnet run (from this folder) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="../../Assets/Scripts/Gameplay/LiquidColor.cs" />
+    <Compile Include="../../Assets/Scripts/Gameplay/LevelData.cs" />
+    <Compile Include="../../Assets/Scripts/Gameplay/LevelSolver.cs" />
+    <Compile Include="../../Assets/Scripts/Gameplay/LevelDataGenerator.cs" />
+    <Compile Include="../../Assets/Scripts/Localization/LocalizationTable.cs" />
+    <Compile Include="../../Assets/Scripts/Save/SaveCrypto.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../Assets/Resources/Levels/*.json" LinkBase="Levels" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

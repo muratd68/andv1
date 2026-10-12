@@ -1,13 +1,15 @@
 using UnityEngine;
 using System.Collections.Generic;
-// using Firebase.Analytics; // Uncomment when Firebase is imported
+#if WATERSORT_FIREBASE
+using Firebase.Analytics;
+#endif
 
 namespace WaterSort.Core
 {
     /// <summary>
-    /// Analytics event tracking
-    /// Integrates with Firebase Analytics (or other analytics services)
-    /// TODO: Import Firebase SDK and uncomment Firebase code
+    /// Analytics event tracking.
+    /// Logs to the console by default; with the Firebase SDK imported and the
+    /// WATERSORT_FIREBASE define set, events also go to Firebase Analytics.
     /// </summary>
     public class AnalyticsManager : MonoBehaviour
     {
@@ -31,6 +33,7 @@ namespace WaterSort.Core
         public bool DebugMode = true;
 
         private bool _isInitialized = false;
+        private bool _firebaseReady = false;
 
         private void Awake()
         {
@@ -56,22 +59,17 @@ namespace WaterSort.Core
                 return;
             }
 
-            // TODO: Uncomment when Firebase is imported
-            /*
-            Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
+            FirebaseInit.WhenReady(ok =>
             {
-                var dependencyStatus = task.Result;
-                if (dependencyStatus == Firebase.DependencyStatus.Available)
+                _firebaseReady = ok;
+#if WATERSORT_FIREBASE
+                if (ok)
                 {
                     FirebaseAnalytics.SetAnalyticsCollectionEnabled(true);
                     Debug.Log("Firebase Analytics initialized");
                 }
-                else
-                {
-                    Debug.LogError($"Could not resolve Firebase dependencies: {dependencyStatus}");
-                }
+#endif
             });
-            */
 
             _isInitialized = true;
         }
@@ -96,8 +94,9 @@ namespace WaterSort.Core
                 Debug.Log($"[Analytics] Event: {eventName} | Params: {paramsStr}");
             }
 
-            // TODO: Uncomment when Firebase is imported
-            /*
+#if WATERSORT_FIREBASE
+            if (!_firebaseReady) return;
+
             if (parameters != null && parameters.Count > 0)
             {
                 Parameter[] firebaseParams = new Parameter[parameters.Count];
@@ -122,7 +121,7 @@ namespace WaterSort.Core
             {
                 FirebaseAnalytics.LogEvent(eventName);
             }
-            */
+#endif
         }
 
         #region Common Events
@@ -232,8 +231,10 @@ namespace WaterSort.Core
         {
             if (!EnableAnalytics) return;
 
-            // TODO: Uncomment when Firebase is imported
-            // FirebaseAnalytics.SetUserProperty(propertyName, value);
+#if WATERSORT_FIREBASE
+            if (_firebaseReady)
+                FirebaseAnalytics.SetUserProperty(propertyName, value);
+#endif
 
             if (DebugMode)
             {

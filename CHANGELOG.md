@@ -2,16 +2,34 @@
 
 Projedeki tüm önemli değişiklikler bu dosyada belgelenecektir.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-12
 
-### Yapılacaklar
-- DOTween paketi entegrasyonu
-- AdMob SDK entegrasyonu
-- Firebase SDK entegrasyonu
-- Prefab'ların oluşturulması
-- Sahnelerin kurulması
-- Görsellerin eklenmesi
-- Ses efektlerinin eklenmesi
+### Eklenen
+- Tek tıkla kurulum: `Water Sort > Projeyi Kur` sahneleri, prefabları, UI'ı oluşturur ve bağlar
+- Türkçe ve İngilizce dil desteği
+- Çözücü (LevelSolver): her seviye doğrulanır, ipucu gerçek hamleyi gösterir
+- Ana menüde ayarlar ve seviye seçme
+- Reklamları Kaldır satın alması (Unity IAP), iOS için geri yükleme
+- AdMob, Firebase ve IAP kodu SDK kurulunca otomatik açılır (`WATERSORT_*` tanımları)
+- Şifreli kayıt ve eski kayıtlardan otomatik taşıma
+- Müzik ve ses efekti desteği, güvenli alan (notch) desteği, kamera otomatik sığdırma
+- Unity olmadan çalışan testler ve derleme kontrolleri (`Tests/`)
+
+### Değişen
+- DOTween kaldırıldı, yerine yerleşik `SimpleTween`
+- Level JSON formatı: her tüp `{ "Colors": [...] }`
+- Reklamları Kaldır yalnızca interstitial ve banner'ı kaldırır; ödüllü reklamlar isteğe bağlı kalır
+- Prosedürel seviyeler her açılışta aynı (seviye numarasına bağlı seed)
+
+### Düzeltilen
+- Derleme hataları (PlayerData tekrarı, property üzerinde [Header], olmayan metotlar, BuildOptimizer)
+- İkinci seviyede dokunmaların çalışmaması
+- Elle tasarlanmış JSON seviyelerinin hiç yüklenmemesi
+- Çözülemeyen seviye üretilebilmesi
+- Tüp kapasitesi, ekstra tüp yerleşimi, nesne havuzu, geri alma hakkı sıfırlama
+- Atlanan seviyenin kaydedilmemesi, seviye yazısının güncellenmemesi
+- Ana menüde günlük ödülün çökmesi, Türkçe cihazlarda tarih kaydı
+- Reklam sıklığı sayacı, şifrelemede sabit IV
 
 ## [0.1.0] - 2024-11-17
 

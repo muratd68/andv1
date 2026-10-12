@@ -9,6 +9,8 @@ namespace WaterSort.Core
     /// </summary>
     public class MainMenuUI : MonoBehaviour
     {
+        public static MainMenuUI Instance { get; private set; }
+
         [Header("Buttons")]
         public Button PlayButton;
         public Button ContinueButton;
@@ -16,6 +18,7 @@ namespace WaterSort.Core
         public Button SettingsButton;
         public Button NoAdsButton;
         public Button DailyRewardButton;
+        public Button RestorePurchasesButton;
 
         [Header("Info")]
         public TextMeshProUGUI CurrentLevelText;
@@ -24,11 +27,79 @@ namespace WaterSort.Core
         [Header("Daily Reward Indicator")]
         public GameObject DailyRewardAvailableIndicator;
 
+        [Header("Message Toast")]
+        public GameObject MessagePopup;
+        public TextMeshProUGUI MessageText;
+
+        [Header("Settings Popup")]
+        public GameObject SettingsPopup;
+        public Toggle SoundToggle;
+        public Toggle MusicToggle;
+        public Toggle HapticToggle;
+        public Button SettingsCloseButton;
+        public Button LanguageButton;
+
+        [Header("Level Select Popup")]
+        public GameObject LevelSelectPopup;
+        [Tooltip("Parent for level buttons, e.g. the Content of a ScrollRect with a GridLayoutGroup")]
+        public Transform LevelButtonContainer;
+        [Tooltip("Button prefab with a TextMeshProUGUI child for the level number")]
+        public Button LevelButtonPrefab;
+        public Button LevelSelectCloseButton;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
+
+        private void OnEnable()
+        {
+            Loc.LanguageChanged += UpdateUI;
+            IAPManager.Instance.NoAdsOwned += UpdateUI;
+        }
+
+        private void OnDisable()
+        {
+            Loc.LanguageChanged -= UpdateUI;
+            if (IAPManager.Exists)
+                IAPManager.Instance.NoAdsOwned -= UpdateUI;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        public void ShowMessage(string message, float duration = 2f)
+        {
+            if (MessagePopup == null || MessageText == null)
+            {
+                Debug.Log(message);
+                return;
+            }
+
+            MessageText.text = message;
+            MessagePopup.SetActive(true);
+            CancelInvoke(nameof(HideMessage));
+            Invoke(nameof(HideMessage), duration);
+        }
+
+        private void HideMessage()
+        {
+            if (MessagePopup != null)
+                MessagePopup.SetActive(false);
+        }
+
         private void Start()
         {
             SetupButtons();
+            SetupSettings();
             UpdateUI();
             CheckDailyReward();
+
+            if (SettingsPopup != null) SettingsPopup.SetActive(false);
+            if (MessagePopup != null) MessagePopup.SetActive(false);
+            if (LevelSelectPopup != null) LevelSelectPopup.SetActive(false);
         }
 
         private void SetupButtons()
@@ -50,6 +121,9 @@ namespace WaterSort.Core
 
             if (DailyRewardButton != null)
                 DailyRewardButton.onClick.AddListener(OnDailyRewardClicked);
+
+            if (RestorePurchasesButton != null)
+                RestorePurchasesButton.onClick.AddListener(() => IAPManager.Instance.RestorePurchases());
         }
 
         private void UpdateUI()
@@ -58,7 +132,7 @@ namespace WaterSort.Core
 
             if (CurrentLevelText != null)
             {
-                CurrentLevelText.text = $"Level {currentLevel + 1}";
+                CurrentLevelText.text = Loc.Get("hud.level", currentLevel + 1);
             }
 
             if (CoinText != null)
@@ -71,6 +145,12 @@ namespace WaterSort.Core
             {
                 ContinueButton.gameObject.SetActive(currentLevel > 0);
             }
+
+            bool adsRemoved = SaveManager.Instance.HasNoAdsPurchased();
+            if (NoAdsButton != null)
+                NoAdsButton.gameObject.SetActive(!adsRemoved);
+            if (RestorePurchasesButton != null)
+                RestorePurchasesButton.gameObject.SetActive(!adsRemoved && IAPManager.Instance.NeedsRestoreButton);
         }
 
         private void CheckDailyReward()
@@ -85,7 +165,8 @@ namespace WaterSort.Core
 
         private void OnPlayClicked()
         {
-            // Start from level 0
+            // New game: start from level 0 (highest level reached is kept for level select)
+            SaveManager.Instance.SetCurrentLevel(0);
             GameManager.Instance.ChangeState(GameState.Playing);
         }
 
@@ -95,30 +176,114 @@ namespace WaterSort.Core
             GameManager.Instance.ChangeState(GameState.Playing);
         }
 
-        private void OnLevelSelectClicked()
+        #region Settings
+
+        private void SetupSettings()
         {
-            // TODO: Show level select screen
-            Debug.Log("Level Select - TODO");
+            if (SoundToggle != null)
+            {
+                SoundToggle.isOn = GameManager.Instance.IsSoundEnabled;
+                SoundToggle.onValueChanged.AddListener(value =>
+                {
+                    GameManager.Instance.IsSoundEnabled = value;
+                    GameManager.Instance.SaveSettings();
+                });
+            }
+
+            if (MusicToggle != null)
+            {
+                MusicToggle.isOn = GameManager.Instance.IsMusicEnabled;
+                MusicToggle.onValueChanged.AddListener(value => GameManager.Instance.SetMusicEnabled(value));
+            }
+
+            if (HapticToggle != null)
+            {
+                HapticToggle.isOn = GameManager.Instance.IsHapticEnabled;
+                HapticToggle.onValueChanged.AddListener(value =>
+                {
+                    GameManager.Instance.IsHapticEnabled = value;
+                    GameManager.Instance.SaveSettings();
+                });
+            }
+
+            if (SettingsCloseButton != null)
+                SettingsCloseButton.onClick.AddListener(() => SettingsPopup.SetActive(false));
+
+            if (LanguageButton != null)
+                LanguageButton.onClick.AddListener(Loc.ToggleLanguage);
         }
 
         private void OnSettingsClicked()
         {
-            // TODO: Show settings popup
-            Debug.Log("Settings - TODO");
+            if (SettingsPopup != null)
+                SettingsPopup.SetActive(true);
         }
+
+        #endregion
+
+        #region Level Select
+
+        private void OnLevelSelectClicked()
+        {
+            if (LevelSelectPopup == null || LevelButtonContainer == null || LevelButtonPrefab == null)
+            {
+                Debug.LogWarning("Level select popup is not set up in the inspector");
+                return;
+            }
+
+            BuildLevelButtons();
+            LevelSelectPopup.SetActive(true);
+
+            if (LevelSelectCloseButton != null)
+            {
+                LevelSelectCloseButton.onClick.RemoveAllListeners();
+                LevelSelectCloseButton.onClick.AddListener(() => LevelSelectPopup.SetActive(false));
+            }
+        }
+
+        /// <summary>
+        /// One button per unlocked level (every level up to the highest reached)
+        /// </summary>
+        private void BuildLevelButtons()
+        {
+            for (int i = LevelButtonContainer.childCount - 1; i >= 0; i--)
+                Destroy(LevelButtonContainer.GetChild(i).gameObject);
+
+            int highest = SaveManager.Instance.GetHighestLevel();
+            for (int level = 0; level <= highest; level++)
+            {
+                int levelIndex = level; // captured by the click handler
+                Button button = Instantiate(LevelButtonPrefab, LevelButtonContainer);
+
+                var label = button.GetComponentInChildren<TextMeshProUGUI>();
+                if (label != null)
+                    label.text = (levelIndex + 1).ToString();
+
+                button.onClick.AddListener(() =>
+                {
+                    SaveManager.Instance.SetCurrentLevel(levelIndex);
+                    GameManager.Instance.ChangeState(GameState.Playing);
+                });
+            }
+        }
+
+        #endregion
 
         private void OnNoAdsClicked()
         {
-            // TODO: Show IAP purchase screen
-            Debug.Log("No Ads Purchase - TODO: Implement IAP");
+            IAPManager.Instance.BuyNoAds();
         }
 
         private void OnDailyRewardClicked()
         {
             if (RewardManager.Instance.CanClaimDailyReward())
             {
-                RewardManager.Instance.ShowDailyRewardAd();
-                CheckDailyReward(); // Update indicator
+                RewardManager.Instance.ShowDailyRewardAd(() =>
+                {
+                    // Update indicator and coins once the reward is granted
+                    CheckDailyReward();
+                    UpdateUI();
+                });
             }
             else
             {

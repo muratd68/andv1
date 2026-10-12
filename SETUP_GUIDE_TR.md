@@ -1,250 +1,90 @@
 # Hızlı Başlangıç Kılavuzu
 
-Bu doküman, projeyi ilk kez açan birinin adım adım ne yapması gerektiğini açıklar.
+Bu kılavuz projeyi Unity'de açıp oynanır hale getirmeyi anlatır. Toplam süre yaklaşık 10 dakika.
 
 ## 1. Unity'de Projeyi Aç
 
-```
-1. Unity Hub'ı aç
-2. "Add" butonuna tıkla
-3. Bu klasörü seç
-4. Unity 2021.3 LTS veya üzeri seç
-5. Projeyi aç
-```
+1. **Unity 2021.3 LTS** kur (Unity Hub > Installs). Android için "Android Build Support", iOS için "iOS Build Support" modüllerini ekle.
+2. Unity Hub > **Add** > **Add project from disk** > bu klasörü seç.
+3. İlk açılışta Unity paketleri indirir ve scriptleri derler. Console'da kırmızı hata olmamalı.
 
-İlk açılışta birkaç dakika sürebilir (script'leri compile ediyor).
+## 2. Projeyi Kur
 
-## 2. Gerekli Paketleri İçe Aktar
+Üst menüden **Water Sort > Projeyi Kur (Sahneler + Prefablar)** seç.
 
-### TextMeshPro (Zorunlu)
-```
-Window > TextMeshPro > Import TMP Essential Resources
-```
+1. İlk seferde "TextMeshPro Essential Resources içe aktarıldı" mesajı çıkar. İçe aktarma bitince menüyü **bir kez daha** çalıştır.
+2. İkinci çalıştırmada şunlar oluşturulur:
+   - **Sahneler:** `Assets/Scenes/Bootstrap.unity`, `MainMenu.unity`, `Game.unity` (Build Settings'e sırayla eklenir)
+   - **Prefablar:** `Assets/Prefabs/Tube.prefab`, `Assets/Prefabs/UI/LevelButton.prefab`, `Assets/Resources/Prefabs/LiquidSegment.prefab`
+   - **Görseller:** `Assets/Art/Generated/Tube.png`, `LiquidSegment.png`
+   - Ana menü, oyun ekranı, ayarlar, seviye seçme, level tamamlama, reklam onayı pencereleri ve tüm buton bağlantıları
+3. "Hazır!" mesajı çıkınca kurulum bitti.
 
-### DOTween (Zorunlu - Animasyonlar)
-```
-1. Asset Store'da ara: "DOTween"
-2. Download + Import
-3. Tools > Demigiant > DOTween Utility Panel > Setup DOTween
-```
+Menüyü tekrar çalıştırırsan her şey baştan oluşturulur (sahnelerde elle yaptığın değişiklikler silinir, önce sorar).
 
-### Google Mobile Ads SDK (Reklamlar için)
-```
-1. https://github.com/googleads/googleads-mobile-unity/releases
-2. Son sürümü indir (GoogleMobileAds-v*.unitypackage)
-3. Unity'de Assets > Import Package > Custom Package
-4. Import et
-```
+## 3. Oyna
 
-İmport ettikten sonra:
-```
-Assets/Scripts/Services/AdsManager.cs dosyasını aç
-Başındaki // using GoogleMobileAds.Api; yorumunu kaldır
-Dosya içindeki diğer yorum satırlarını da kaldır
-```
+**Water Sort > Oyunu Başlat** seç. Bootstrap sahnesi açılır ve oyun başlar.
 
-## 3. Sahneleri Oluştur
+- Ana menü > **Oyna** ile seviye 1 başlar.
+- Bir tüpe dokun (seçilir, büyür), sonra başka bir tüpe dokun (sıvı dökülür).
+- Reklam gerektiren butonlar (ipucu, ekstra tüp, 5 hakkı bitince geri al) test modunda çalışır: ekranda "Test reklamı oynatılıyor..." yazar, birkaç saniye sonra ödül verilir.
+- Ayarlar > **Dil** butonu Türkçe/İngilizce arasında geçiş yapar.
 
-Şu sahneleri oluşturman gerekiyor:
+## 4. Kendi Görsellerini ve Seslerini Ekle (Opsiyonel)
 
-### Bootstrap Scene
-```
-File > New Scene
-Boş GameObject oluştur, adını "GameManager" yap
-GameManager scriptini attach et
-File > Save As > Scenes/Bootstrap
-```
+- **Tüp görseli:** `Assets/Art/Generated/Tube.png` dosyasını kendi görselinle değiştir (pivot alt-orta, 100 piksel = 1 birim). Ya da `Tube.prefab` içindeki SpriteRenderer'a başka sprite ver.
+- **Sesler:** Game sahnesinde `InputManager` üzerinde Select/Pour/Error Sound alanları var. Arka plan müziği için Bootstrap sahnesindeki `GameManager` > Background Music.
+- **Renkler ve fontlar:** Sahnelerdeki UI nesneleri normal Unity UI nesneleridir, Inspector'dan değiştirilebilir.
 
-### MainMenu Scene
-```
-File > New Scene
-Canvas oluştur (UI > Canvas)
-Canvas'a MainMenuUI scriptini attach et
-Play, Settings, Level Select butonları ekle
-File > Save As > Scenes/MainMenu
-```
+## 5. Reklamlar, Analitik ve Satın Alma (Opsiyonel)
 
-### Game Scene
-```
-File > New Scene
-Canvas oluştur (UI > Canvas)
-Canvas'a UIManager scriptini attach et
-Empty GameObject: "TubesContainer"
-Empty GameObject: "LevelManager" (LevelManager scriptini attach et)
-Empty GameObject: "InputManager" (InputManager scriptini attach et)
-File > Save As > Scenes/Game
-```
+Bunlar kurulmadan da oyun eksiksiz çalışır (test modu). Kurmak istediğinde:
 
-Build Settings'e sahneleri ekle:
-```
-File > Build Settings
-Add Open Scenes (her 3 sahneyi de ekle)
-Bootstrap en üstte olmalı
-```
+### AdMob
+1. [Google Mobile Ads Unity eklentisini](https://github.com/googleads/googleads-mobile-unity/releases) (8.0 veya üstü) indir ve `Assets > Import Package > Custom Package` ile içe aktar.
+2. `Assets > Google Mobile Ads > Settings` içine AdMob App ID'lerini gir.
+3. `Assets/Scripts/Services/AdsManager.cs` içindeki reklam birimi ID'lerini kendi ID'lerinle değiştir (şu an Google test ID'leri var).
 
-## 4. Prefab'ları Oluştur
+### Firebase (Analytics + Remote Config)
+1. [Firebase Console](https://console.firebase.google.com/)'da proje oluştur, Android/iOS uygulamasını ekle.
+2. `google-services.json` ve/veya `GoogleService-Info.plist` dosyasını `Assets/` içine koy.
+3. Firebase Unity SDK'dan **FirebaseAnalytics** ve **FirebaseRemoteConfig** paketlerini içe aktar.
 
-### Tube Prefab
-```
-Hierarchy'de Create Empty > "Tube"
+### Reklamları Kaldır (IAP)
+1. Window > Package Manager > **In-App Purchasing** (4.x) kur.
+2. Google Play Console / App Store Connect'te `com.yourcompany.watersort.noads` kimlikli "non-consumable" ürün oluştur (farklı kimlik kullanırsan `IAPManager.NoAdsProductId`'yi değiştir).
 
-Tube altında:
-1. Sprite Renderer ekle
-   - Sprite: Basit bir dikdörtgen (Create > Sprites > Square)
-   - Color: Beyaz/Açık Gri
-   - Sorting Layer: Default
+### Son adım
+Herhangi birini kurduktan sonra **Water Sort > SDK Tanımlarını Güncelle** çalıştır. Araç kurulu SDK'ları algılar ve ilgili kodu açar. Bir SDK'yı kaldırırsan yine bu menüyü çalıştır, aksi halde proje derlenmez.
 
-2. Box Collider 2D ekle
-   - Is Trigger: false
-   - Size: (1, 2)
+## 6. Android Build
 
-3. TubeController script ekle
-   - Max Capacity: 4
-
-4. Create Empty child: "LiquidContainer"
-   - Position: (0, -0.8, 0)
-
-Prefabs klasörüne sürükle
-```
-
-### LiquidSegment Prefab
-```
-Hierarchy'de Sprite > Square
-Adını "LiquidSegment" yap
-Scale: (0.4, 0.2, 1)
-Color: Red (test için)
-
-Prefabs klasörüne sürükle
-```
-
-### TubeController'da Prefab Referansını Ayarla
-```
-Tube prefab'ını seç
-TubeController > Liquid Segment Prefab: LiquidSegment prefab'ını sürükle
-Apply changes
-```
-
-## 5. UI Prefabları (Basit Versiyon)
-
-### LevelCompletePopup
-```
-UI > Panel (adını "LevelCompletePopup" yap)
-Panel altında:
-  - UI > Text - TextMeshPro: "Level Complete!" (title)
-  - UI > Text - TextMeshPro: "Moves: X" (moves text)
-  - UI > Button: "Next Level" (next button)
-
-Prefabs/UI/ klasörüne kaydet
-```
-
-Diğer popup'lar da benzer şekilde oluşturulur (isteğe bağlı).
-
-## 6. Game Scene'de Referansları Bağla
-
-### LevelManager
-```
-LevelManager GameObject'i seç
-
-LevelManager script:
-  - Tubes Container: Hierarchy'deki TubesContainer'ı sürükle
-  - Tube Prefab: Prefabs/Tube prefab'ını sürükle
-```
-
-### UIManager
-```
-Canvas'ı seç
-
-UIManager script:
-  - Level Text: Level text UI elementini sürükle
-  - Move Count Text: Move count text UI elementini sürükle
-  - Undo Button: Undo button'ını sürükle
-  - Restart Button: Restart button'ını sürükle
-  - Level Complete Popup: LevelCompletePopup prefab'ını sürükle
-  (diğer referanslar opsiyonel)
-```
-
-## 7. Kamera Ayarı
-
-```
-Main Camera:
-  - Position: (0, 0, -10)
-  - Projection: Orthographic
-  - Size: 5
-  - Background: Mavi/Gri bir renk
-```
-
-## 8. İlk Test
-
-```
-1. Bootstrap sahnesini aç
-2. Play butonuna bas
-3. Console'da hata olmamalı
-4. MainMenu sahnesine geçmeli
-5. Play butonuna basınca Game sahnesine geçmeli
-6. Tüpler görünmeli
-7. Tüplere tıklayınca seçilmeli
-```
-
-## 9. Reklam Test (Opsiyonel)
-
-Eğer AdMob SDK import ettiysen:
-
-```
-AdsManager GameObject'i oluştur (Bootstrap sahnesinde)
-AdsManager script ekle
-
-Test Ad Unit ID'leri (varsayılan olarak zaten var):
-  - App ID: ca-app-pub-3940256099942544~3347511713
-  - Interstitial: ca-app-pub-3940256099942544/1033173712
-  - Rewarded: ca-app-pub-3940256099942544/5224354917
-  - Banner: ca-app-pub-3940256099942544/6300978111
-```
-
-Play modunda Console'da "[MOCK] Ads..." mesajları göreceksin.
-
-## 10. Android Build Test
-
-```
-File > Build Settings
-Platform: Android > Switch Platform
-
-Build Settings'de "Development Build" işaretle
-Build and Run
-
-APK cihazda çalışmalı
-```
+1. File > Build Settings > **Android** > Switch Platform.
+2. Player Settings: Company Name, Product Name, Package Name (`com.yourcompany.watersort` yerine kendi adın).
+3. Publishing Settings > Keystore oluştur (Google Play için zorunlu).
+4. **Build** (APK, test için) veya **Build App Bundle** (AAB, Google Play için).
 
 ## Sorun Giderme
 
-### "DOTween not found" hatası
-- DOTween paketini import et
-- Tools > Demigiant > DOTween Utility Panel > Setup DOTween
+### Menüde "Water Sort" görünmüyor
+Console'da derleme hatası var demektir. Hatayı düzelt ya da bir SDK'yı kaldırdıysan `Assets/Scripts` derlenemiyor olabilir: Project Settings > Player > Scripting Define Symbols'tan `WATERSORT_*` tanımlarını sil.
 
-### Tüpler görünmüyor
-- Tube prefab'ın Sprite Renderer'ının olduğundan emin ol
-- LevelManager'da Tube Prefab referansının olduğundan emin ol
-- Camera'nın Orthographic olduğundan emin ol
+### Yazılar görünmüyor
+TextMeshPro Essential Resources eksik. Window > TextMeshPro > Import TMP Essential Resources, sonra kurulumu tekrar çalıştır.
 
-### Tıklama çalışmıyor
-- InputManager GameObject'inin olduğundan emin ol
-- Tube'larda Box Collider 2D olduğundan emin ol
-- Event System'in olduğundan emin ol (Canvas ile otomatik gelir)
+### Tüpler ekrana sığmıyor
+Game sahnesindeki `LevelManager` > Fit Camera To Tubes açık olmalı. Board Screen Share değerini düşürerek tüpleri küçültebilirsin.
 
-### Seviye yüklenmiyor
-- Resources/Levels/ klasöründe örnek level JSON'ları olduğundan emin ol
-- LevelDataGenerator prosedürel üretiyor, JSON yoksa sıkıntı yok
+### Tüplere dokunma çalışmıyor
+Tube prefab'ında BoxCollider2D olmalı ve sahnede EventSystem bulunmalı. Kurulum aracı ikisini de ekler; elle değiştirdiysen kurulumu tekrar çalıştır.
 
-## Sonraki Adımlar
+## Unity Olmadan Kontrol
 
-Temel çalışır hale geldiğinde:
+.NET 8 SDK kuruluysa:
 
-1. Görselleri iyileştir (tüp sprite'ı, arkaplan, buttonlar)
-2. Ses efektleri ekle
-3. Animasyonları iyileştir (DOTween ile)
-4. Daha fazla level tasarla
-5. Gerçek AdMob Unit ID'lerini ekle
-6. Firebase ekle (Analytics + Remote Config)
-
----
-
-Herhangi bir sorun yaşarsan README.md'yi kontrol et veya GitHub Issues'a yaz!
+```bash
+dotnet run --project Tests/LogicTests        # seviyeler, çözücü, şifreleme, çeviriler
+dotnet build Tests/CompileCheck              # scriptler Unity 2021.3 API'sine karşı derleniyor mu
+dotnet build Tests/EditorCompileCheck        # editör scriptleri dahil
+```

@@ -35,6 +35,9 @@ namespace WaterSort.Core
         public Button SettingsButton;
         public Button ExtraTubeButton;
         public Button HintButton;
+        public Button MenuButton;
+        public Button SettingsCloseButton;
+        public Button LanguageButton;
 
         [Header("Popups")]
         public GameObject LevelCompletePopup;
@@ -66,6 +69,30 @@ namespace WaterSort.Core
             _instance = this;
         }
 
+        private void OnEnable()
+        {
+            Loc.LanguageChanged += RefreshTexts;
+        }
+
+        private void OnDisable()
+        {
+            Loc.LanguageChanged -= RefreshTexts;
+        }
+
+        /// <summary>
+        /// Re-renders the code-driven texts in the current language
+        /// </summary>
+        private void RefreshTexts()
+        {
+            UpdateHUD();
+
+            if (LevelManager.Instance != null)
+            {
+                UpdateMoveCount(LevelManager.Instance.MoveCount);
+                UpdateUndoCount(LevelManager.Instance.UndoMovesRemaining);
+            }
+        }
+
         private void Start()
         {
             SetupButtons();
@@ -89,6 +116,15 @@ namespace WaterSort.Core
 
             if (HintButton != null)
                 HintButton.onClick.AddListener(OnHintClicked);
+
+            if (MenuButton != null)
+                MenuButton.onClick.AddListener(() => GameManager.Instance.ChangeState(GameState.MainMenu));
+
+            if (SettingsCloseButton != null)
+                SettingsCloseButton.onClick.AddListener(HideSettingsPopup);
+
+            if (LanguageButton != null)
+                LanguageButton.onClick.AddListener(Loc.ToggleLanguage);
 
             // Settings toggles
             if (SoundToggle != null)
@@ -122,7 +158,7 @@ namespace WaterSort.Core
         {
             if (LevelText != null && LevelManager.Instance != null)
             {
-                LevelText.text = $"Level {LevelManager.Instance.CurrentLevelIndex + 1}";
+                LevelText.text = Loc.Get("hud.level", LevelManager.Instance.CurrentLevelIndex + 1);
             }
         }
 
@@ -130,7 +166,7 @@ namespace WaterSort.Core
         {
             if (MoveCountText != null)
             {
-                MoveCountText.text = $"Moves: {moves}";
+                MoveCountText.text = Loc.Get("hud.moves", moves);
             }
         }
 
@@ -138,20 +174,15 @@ namespace WaterSort.Core
         {
             if (UndoCountText != null)
             {
-                UndoCountText.text = $"Undo: {remaining}";
+                UndoCountText.text = Loc.Get("hud.undo_count", remaining);
             }
 
-            // Update button interactability
+            // Show that undo requires an ad once free undos are used up (and switch back after a refill)
             if (UndoButton != null)
             {
-                // Show different icon or text when undo requires ad
-                if (remaining <= 0)
-                {
-                    // Change button to show ad icon
-                    var buttonText = UndoButton.GetComponentInChildren<TextMeshProUGUI>();
-                    if (buttonText != null)
-                        buttonText.text = "Undo (Ad)";
-                }
+                var buttonText = UndoButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (buttonText != null)
+                    buttonText.text = Loc.Get(remaining <= 0 ? "button.undo_ad" : "button.undo");
             }
         }
 
@@ -210,10 +241,7 @@ namespace WaterSort.Core
 
         private void OnMusicToggled(bool value)
         {
-            GameManager.Instance.IsMusicEnabled = value;
-            GameManager.Instance.SaveSettings();
-
-            // TODO: Control background music
+            GameManager.Instance.SetMusicEnabled(value);
         }
 
         private void OnHapticToggled(bool value)
@@ -250,12 +278,12 @@ namespace WaterSort.Core
 
             if (LevelCompleteTitle != null)
             {
-                LevelCompleteTitle.text = $"Level {levelIndex + 1} Tamamlandı!";
+                LevelCompleteTitle.text = Loc.Get("complete.title", levelIndex + 1);
             }
 
             if (LevelCompleteMoves != null)
             {
-                LevelCompleteMoves.text = $"{moveCount} hamle ile tamamladınız!";
+                LevelCompleteMoves.text = Loc.Get("complete.moves", moveCount);
             }
 
             if (LevelCompleteNextButton != null)
