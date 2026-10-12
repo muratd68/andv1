@@ -139,8 +139,9 @@ namespace WaterSort.Core
 
             Vector3 worldPosition = cam.ScreenToWorldPoint(screenPosition);
 
-            // Raycast to detect tube
-            RaycastHit2D hit = Physics2D.Raycast(worldPosition, Vector2.zero, Mathf.Infinity, TubeLayer);
+            // Raycast to detect tube (an unset mask means "all layers" instead of "nothing")
+            int mask = TubeLayer.value != 0 ? TubeLayer.value : Physics2D.DefaultRaycastLayers;
+            RaycastHit2D hit = Physics2D.Raycast(worldPosition, Vector2.zero, Mathf.Infinity, mask);
 
             if (hit.collider != null)
             {

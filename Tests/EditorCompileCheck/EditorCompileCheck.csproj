@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles runtime scripts + Assets/Editor together against Unity 2021 UnityEngine/UnityEditor
+       reference assemblies (NuGet Unity3D.SDK), like Unity's Assembly-CSharp-Editor.
+       Usage: dotnet build (from this folder) -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CS0414;CS0169;CS0649;NU1701;CS0618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/**/*.cs" />
+    <Compile Include="../../Assets/Editor/**/*.cs" />
+    <Compile Include="../CompileCheck/ThirdPartyStubs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Unity3D.SDK" Version="2021.1.14.1" />
+    <PackageReference Include="Unity3D.UnityEngine.UI" Version="2018.3.5.1" />
+  </ItemGroup>
+</Project>

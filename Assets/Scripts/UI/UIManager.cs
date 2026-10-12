@@ -35,6 +35,8 @@ namespace WaterSort.Core
         public Button SettingsButton;
         public Button ExtraTubeButton;
         public Button HintButton;
+        public Button MenuButton;
+        public Button SettingsCloseButton;
 
         [Header("Popups")]
         public GameObject LevelCompletePopup;
@@ -90,6 +92,12 @@ namespace WaterSort.Core
             if (HintButton != null)
                 HintButton.onClick.AddListener(OnHintClicked);
 
+            if (MenuButton != null)
+                MenuButton.onClick.AddListener(() => GameManager.Instance.ChangeState(GameState.MainMenu));
+
+            if (SettingsCloseButton != null)
+                SettingsCloseButton.onClick.AddListener(HideSettingsPopup);
+
             // Settings toggles
             if (SoundToggle != null)
             {
@@ -130,7 +138,7 @@ namespace WaterSort.Core
         {
             if (MoveCountText != null)
             {
-                MoveCountText.text = $"Moves: {moves}";
+                MoveCountText.text = $"Hamle: {moves}";
             }
         }
 
@@ -138,7 +146,7 @@ namespace WaterSort.Core
         {
             if (UndoCountText != null)
             {
-                UndoCountText.text = $"Undo: {remaining}";
+                UndoCountText.text = $"Geri Al: {remaining}";
             }
 
             // Show that undo requires an ad once free undos are used up (and switch back after a refill)
@@ -146,7 +154,7 @@ namespace WaterSort.Core
             {
                 var buttonText = UndoButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (buttonText != null)
-                    buttonText.text = remaining <= 0 ? "Undo (Ad)" : "Undo";
+                    buttonText.text = remaining <= 0 ? "Geri Al (Reklam)" : "Geri Al";
             }
         }
 

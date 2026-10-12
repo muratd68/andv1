@@ -36,6 +36,16 @@ namespace WaterSort.Core
         public float TubeSpacing = 1.5f;
         public float RowSpacing = 3f;
 
+        [Header("Camera")]
+        [Tooltip("Height of the tube sprite in world units (tube pivot is at its bottom)")]
+        public float TubeVisualHeight = 2.1f;
+        public float TubeVisualWidth = 0.8f;
+        [Tooltip("Zoom the orthographic camera so every tube fits on screen")]
+        public bool FitCameraToTubes = true;
+        public float MinCameraSize = 5f;
+        [Tooltip("Share of the screen height the tubes may use (rest is HUD)")]
+        [Range(0.3f, 1f)] public float BoardScreenShare = 0.62f;
+
         [Header("References")]
         public Transform TubesContainer;
         public GameObject TubePrefab;
@@ -171,10 +181,30 @@ namespace WaterSort.Core
                 int tubesInRow = Mathf.Min(perRow, total - row * perRow);
 
                 float xOffset = (col - (tubesInRow - 1) / 2f) * TubeSpacing;
-                float yOffset = ((rows - 1) / 2f - row) * RowSpacing;
+                // Tube pivot is at its bottom: shift down by half a tube so the board is centered
+                float yOffset = ((rows - 1) / 2f - row) * RowSpacing - TubeVisualHeight / 2f;
 
                 _tubes[i].transform.localPosition = new Vector3(xOffset, yOffset, 0);
             }
+
+            FitCamera(perRow, rows);
+        }
+
+        private void FitCamera(int columns, int rows)
+        {
+            Camera cam = Camera.main;
+            if (!FitCameraToTubes || cam == null || !cam.orthographic) return;
+
+            float boardWidth = (columns - 1) * TubeSpacing + TubeVisualWidth + 0.6f;
+            float boardHeight = (rows - 1) * RowSpacing + TubeVisualHeight + 0.6f;
+
+            float sizeForHeight = boardHeight / 2f / BoardScreenShare;
+            float sizeForWidth = boardWidth / 2f / Mathf.Max(0.1f, cam.aspect);
+
+            cam.orthographicSize = Mathf.Max(MinCameraSize, sizeForHeight, sizeForWidth);
+
+            Vector3 center = TubesContainer != null ? TubesContainer.position : Vector3.zero;
+            cam.transform.position = new Vector3(center.x, center.y, cam.transform.position.z);
         }
 
         private void ClearTubes()
