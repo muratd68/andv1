@@ -77,22 +77,25 @@ namespace WaterSort.Core
 
             try
             {
-                byte[] key = DeriveKeyFromPassword(ENCRYPTION_KEY);
-                byte[] iv = new byte[16]; // AES block size
-
                 using (Aes aes = Aes.Create())
                 {
-                    aes.Key = key;
-                    aes.IV = iv;
+                    aes.Key = GetKey();
+                    aes.GenerateIV(); // Fresh random IV per value: equal values no longer encrypt identically
                     aes.Mode = CipherMode.CBC;
                     aes.Padding = PaddingMode.PKCS7;
 
-                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+                    using (ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV))
+                    {
+                        byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
+                        byte[] encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
 
-                    byte[] plainBytes = Encoding.UTF8.GetBytes(plainText);
-                    byte[] encryptedBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+                        // Stored as IV + ciphertext
+                        byte[] output = new byte[aes.IV.Length + encryptedBytes.Length];
+                        Buffer.BlockCopy(aes.IV, 0, output, 0, aes.IV.Length);
+                        Buffer.BlockCopy(encryptedBytes, 0, output, aes.IV.Length, encryptedBytes.Length);
 
-                    return Convert.ToBase64String(encryptedBytes);
+                        return Convert.ToBase64String(output);
+                    }
                 }
             }
             catch (Exception ex)
@@ -112,22 +115,27 @@ namespace WaterSort.Core
 
             try
             {
-                byte[] key = DeriveKeyFromPassword(ENCRYPTION_KEY);
-                byte[] iv = new byte[16];
+                byte[] input = Convert.FromBase64String(encryptedText);
+                const int ivLength = 16; // AES block size
+
+                if (input.Length <= ivLength)
+                    throw new CryptographicException("Encrypted value is too short");
+
+                byte[] iv = new byte[ivLength];
+                Buffer.BlockCopy(input, 0, iv, 0, ivLength);
 
                 using (Aes aes = Aes.Create())
                 {
-                    aes.Key = key;
+                    aes.Key = GetKey();
                     aes.IV = iv;
                     aes.Mode = CipherMode.CBC;
                     aes.Padding = PaddingMode.PKCS7;
 
-                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-
-                    byte[] encryptedBytes = Convert.FromBase64String(encryptedText);
-                    byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-
-                    return Encoding.UTF8.GetString(decryptedBytes);
+                    using (ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
+                    {
+                        byte[] decryptedBytes = decryptor.TransformFinalBlock(input, ivLength, input.Length - ivLength);
+                        return Encoding.UTF8.GetString(decryptedBytes);
+                    }
                 }
             }
             catch (Exception ex)
@@ -135,6 +143,16 @@ namespace WaterSort.Core
                 Debug.LogError($"Decryption failed: {ex.Message}");
                 return encryptedText;
             }
+        }
+
+        // PBKDF2 with 10000 iterations is slow; derive once and reuse for every save/load
+        private byte[] _cachedKey;
+
+        private byte[] GetKey()
+        {
+            if (_cachedKey == null)
+                _cachedKey = DeriveKeyFromPassword(ENCRYPTION_KEY);
+            return _cachedKey;
         }
 
         private byte[] DeriveKeyFromPassword(string password)

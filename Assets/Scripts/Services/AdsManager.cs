@@ -79,6 +79,12 @@ namespace WaterSort.Core
 
             Debug.Log("Initializing Ads Manager...");
 
+            // Respect a "No Ads" purchase from a previous session
+            if (SaveManager.Instance.HasNoAdsPurchased())
+            {
+                EnableAds = false;
+            }
+
             if (!EnableAds)
             {
                 Debug.Log("Ads are disabled");
@@ -197,17 +203,22 @@ namespace WaterSort.Core
             StartCoroutine(SimulateAdClose(2f, onClosed));
         }
 
+        /// <summary>
+        /// Called once per finished level. Every level counts towards the frequency,
+        /// even when the minimum time has not passed yet.
+        /// </summary>
         private bool CanShowInterstitial()
         {
-            // Check time constraint
-            if (Time.time - _lastInterstitialTime < MinTimeBetweenInterstitials)
+            _levelsSinceLastInterstitial++;
+
+            // Check level frequency constraint
+            if (_levelsSinceLastInterstitial < InterstitialFrequency)
             {
                 return false;
             }
 
-            // Check level frequency constraint
-            _levelsSinceLastInterstitial++;
-            if (_levelsSinceLastInterstitial < InterstitialFrequency)
+            // Check time constraint (first ad no earlier than MinTimeBetweenInterstitials after launch)
+            if (Time.time - _lastInterstitialTime < MinTimeBetweenInterstitials)
             {
                 return false;
             }
